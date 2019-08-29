@@ -9,7 +9,7 @@ The add-on is currently setup for real-time analysis but will handle off-line ta
 
 License
 -------
-See LICENSE files included in the libs directory. This addon cannot currently be used in commercial project due to the Essentia library. Consult with UPF MTG for information about commercially licensing Essentia. For non-commercial projects, Essentia's GNU Affero GPLv3 License has information on how to attribute usage.
+See LICENSE files included in the libs directory. This addon cannot currently be used in commercial projects due to the Essentia library. Consult with UPF MTG for information about commercially licensing Essentia. For non-commercial projects, Essentia's GNU Affero GPLv3 License has information on how to attribute usage. Additional libraries with more permissive licenses will be integrated soon, Essentia is great for experimentation in the meantime.
 
 Installation
 ------------
