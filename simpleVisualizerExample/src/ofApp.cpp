@@ -36,8 +36,8 @@ void ofApp::draw(){
   ofFill();
   ofSetColor(0,0,0);
   
-  for(int i = 0; i < 13; i++){
-    ofDrawRectangle(i*(ofGetWidth()/13), 0, 100, abs(hpcp[i])*10000000);
+  for(int i = 0; i < hpcp.size(); i++){
+    ofDrawRectangle(i*(ofGetWidth()/hpcp.size()), 0, 100, abs(hpcp[i])*ofGetHeight());
   }
   
 }
