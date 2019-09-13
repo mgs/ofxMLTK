@@ -22,7 +22,8 @@
 #define AVUTIL_TIME_H
 
 #include <stdint.h>
-#include </usr/include/time.h>
+#include </Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/time.h>
+//#include </usr/include/time.h>
 /**
  * Get the current time in microseconds.
  */
