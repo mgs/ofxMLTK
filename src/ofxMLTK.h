@@ -30,6 +30,11 @@
 //using namespace std;
 //#include "ofMain.h"
 
+#include <cmath>
+#include <functional>
+#include <iostream>
+#include <map>
+
 #include "algorithmfactory.h"
 #include "essentiamath.h"
 #include "pool.h"
@@ -66,7 +71,8 @@
 #define LPC_MIN -1.0
 #define LPC_MAX 1.0
   //----------------------------------
-  // multiply novelty function and threshold for easier parametriation, the true computation is Not Multiplied, only inputs and outputs
+  // multiply novelty function and threshold for easier parameterization,
+  // the true computation is Not Multiplied, only inputs and outputs
 #define NOVELTY_MULT 1
 
 using namespace std;
@@ -80,6 +86,8 @@ public:
   int frameSize;
   bool recording = false;
   
+  ofSoundBuffer leftAudioBuffer, rightAudioBuffer, tmpLeftBuffer, tmpRightBuffer;
+  
   std::map<std::string, VectorInput<Real>> inputMap;
   VectorInput<Real> *inputVec, *leftInputVec, *rightInputVec;
   VectorInput<std::complex<Real>> *complexOut;
@@ -91,6 +99,14 @@ public:
   scheduler::Network *network=NULL;
   
   Pool pool, poolAggr, poolStats;
+  
+  std::map<string, function<vector<Real>()>> db;
+  
+  map<string, Algorithm*> algoDB;
+  
+  void setupAlgorithms(essentia::streaming::AlgorithmFactory& factory, int frameSize, int sampleRate, int hopSize, int largeFrameSize, int largeHopSize);
+  void connectAlgorithmStream(essentia::streaming::AlgorithmFactory& factory);
+  
   Algorithm *rms, *energy, *power, *pitchSalience,
   *pitchSalienceFunction, *pitchSalienceFunctionPeaks,
   *inharmonicity, *hfc, *centroid, *spectralComplexity,
@@ -108,9 +124,7 @@ public:
   essentia::streaming::Algorithm *loudness,*flatness, *cent, *yin, *mfcc, *bfcc,
                                  *TCent, *superFluxP;
   
-  
   essentia::standard::Algorithm *aggr, *output;
-  
   
     //  Algorithm *mag;
     //  Algorithm *constantq;
@@ -119,13 +133,29 @@ public:
     //  Algorithm *constantq;
     //  Algorithm *frameCutterC;
   
-  std::vector<Real> audioBuffer, leftAudioBuffer, rightAudioBuffer;
+  std::vector<Real> audioBuffer;
 
   std::string windowType = "hamming";
   int binsPerOctave = 12;
   
   void setup(int frameSize, int sampleRate, int hopSize, int largeFrameSize, int largeHopSize);
+  void setup(int frameSize, int sampleRate, int hopSize);
+
+//  mType get(string algorithm);
+
+//  Real get(string algorithm);
+//  vector<Real> get(string algorithm);
+//  vector<vector<Real>> get(string algorithm);
+
+  template <class mType>
+  bool pool_contains(string algorithm);
   
+//  template<class mType>
+  Real get_real(string algorithm);
+  vector<Real> get_vector(string algorithm);
+  vector<vector<Real>> get_full_vector(string algorithm);
+  
+  void update();
   void run();
   void save();
   

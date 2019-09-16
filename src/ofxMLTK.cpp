@@ -25,89 +25,73 @@
 #include "ofMain.h"
 #include "ofxMLTK.h"
 
-void MLTK::setup(int frameSize, int sampleRate, int hopSize, int largeFrameSize, int largeHopSize){
-  this->frameSize = frameSize;
-  audioBuffer.resize(frameSize*2, 0.0);
-  leftAudioBuffer.resize(frameSize, 0.0);
-  rightAudioBuffer.resize(frameSize, 0.0);
-  
-  essentia::init();
-  essentia::streaming::AlgorithmFactory& factory = essentia::streaming::AlgorithmFactory::instance();
-  
-    // aggregate the results
-//  Pool aggrPool; // the pool with the aggregated MFCC values
+void MLTK::setupAlgorithms(essentia::streaming::AlgorithmFactory& factory, int frameSize, int sampleRate, int hopSize, int largeFrameSize, int largeHopSize){
+  // Aggregator
   const char* stats[] = { "mean", "var", "min", "max" };
-  
   aggr = standard::AlgorithmFactory::create("PoolAggregator",
-                                                                 "defaultStats", arrayToVector<string>(stats));
+                                            "defaultStats", arrayToVector<string>(stats));
   
-    // write results to file
-//  cout << "-------- writing results to file " << outputFilename << " --------" << endl;
-  
+  // write results to file
+  //  cout << "-------- writing results to file " << outputFilename << " --------" << endl;
   output = standard::AlgorithmFactory::create("YamlOutput",
                                               "filename", ofFilePath::getAbsolutePath(ofToDataPath("")) + "test.yaml");
   
-  factory.init();
-  
-  audioBuffer.resize(frameSize, 0.0);
-  leftAudioBuffer.resize(frameSize, 0.0);
-  rightAudioBuffer.resize(frameSize, 0.0);
   inputVec = new VectorInput<Real>(&audioBuffer);
   inputVec->setVector(&audioBuffer);
-
+  
   dcremoval = factory.create("DCRemoval",
-                              "sampleRate", sampleRate);
-
+                             "sampleRate", sampleRate);
+  
   fc    = factory.create("FrameCutter",
-                          "frameSize",frameSize,
-                          "hopSize", hopSize,
+                         "frameSize",frameSize,
+                         "hopSize", hopSize,
+                         "startFromZero" , true,
+                         "validFrameThresholdRatio", 0,
+                         "lastFrameToEndOfFile", true);
+  
+  fc2    = factory.create("FrameCutter",
+                          "frameSize",largeFrameSize,
+                          "hopSize", largeHopSize,
                           "startFromZero" , true,
                           "validFrameThresholdRatio", 0,
                           "lastFrameToEndOfFile", true);
   
-  fc2    = factory.create("FrameCutter",
-                           "frameSize",largeFrameSize,
-                           "hopSize", largeHopSize,
-                           "startFromZero" , true,
-                           "validFrameThresholdRatio", 0,
-                           "lastFrameToEndOfFile", true);
-  
   
   spectralPeaks = factory.create("SpectralPeaks",
-                                  "maxPeaks", PEAKS_MAXPEAKS_NUM,
-                                  "minFrequency", PEAKS_MIN_FREQ,
-                                  "maxFrequency", PEAKS_MAX_FREQ);
+                                 "maxPeaks", PEAKS_MAXPEAKS_NUM,
+                                 "minFrequency", PEAKS_MIN_FREQ,
+                                 "maxFrequency", PEAKS_MAX_FREQ);
   
   w = factory.create("Windowing",
+                     "type", windowType,
+                     "zeroPhase", true,
+                     "zeroPadding", 0);
+  
+  w2 = factory.create("Windowing",
                       "type", windowType,
                       "zeroPhase", true,
                       "zeroPadding", 0);
-  
-  w2 = factory.create("Windowing",
-                       "type", windowType,
-                       "zeroPhase", true,
-                       "zeroPadding", 0);
   
   fft  = factory.create("FFT");
     //  fft2  = factory.create("FFT");
   
   spec  = factory.create("Spectrum",
-                          "size", (frameSize/2));
+                         "size", (frameSize/2));
   
   bfcc  = factory.create("BFCC",
-                          "inputSize", (frameSize/2)+1);
+                         "inputSize", (frameSize/2)+1);
   
   mfcc  = factory.create("MFCC",
-                          "dctType", 2,
-                          "inputSize", (frameSize/2)+1);
+                         "dctType", 2,
+                         "inputSize", (frameSize/2)+1);
   
   gfcc  = factory.create("GFCC",
-                          "inputSize", (frameSize/2)+1);
+                         "inputSize", (frameSize/2)+1);
   
   lpc = factory.create("LPC",
-                        "order", LPC_COEFS,
-                        "sampleRate", sampleRate,
-                        "type", "regular");
+                       "order", LPC_COEFS,
+                       "sampleRate", sampleRate,
+                       "type", "regular");
   
   rms = factory.create("RMS");
   energy = factory.create("Energy");
@@ -116,40 +100,42 @@ void MLTK::setup(int frameSize, int sampleRate, int hopSize, int largeFrameSize,
   centroid = factory.create("Centroid", "range", sampleRate/2);
   
   spectralPeaks = factory.create("SpectralPeaks",
-                                  "maxPeaks", PEAKS_MAXPEAKS_NUM,
-                                  "magnitudeThreshold", 0.00001,
-                                  "minFrequency", PEAKS_MIN_FREQ,
-                                  "maxFrequency", PEAKS_MAX_FREQ,
-                                  "orderBy", "frequency");
+                                 "maxPeaks", PEAKS_MAXPEAKS_NUM,
+                                 "magnitudeThreshold", 0.00001,
+                                 "minFrequency", PEAKS_MIN_FREQ,
+                                 "maxFrequency", PEAKS_MAX_FREQ,
+                                 "orderBy", "frequency");
   
   
   pitchDetect = factory.create("PitchYinFFT",
-                                "frameSize", frameSize,
-                                "sampleRate", sampleRate);
+                               "frameSize", frameSize,
+                               "sampleRate", sampleRate);
   
   hpcp = factory.create("HPCP",
-                         "size", HPCP_SIZE,
-                         "referenceFrequency", 440,
-                         "bandPreset", false,
-                         "minFrequency", HPCP_MIN_FREQ,
-                         "maxFrequency", HPCP_MAX_FREQ,
-                         "weightType", "squaredCosine",
-                         "nonLinear", false,
-                         "windowSize", 4.0/3.0);
+                        "size", HPCP_SIZE,
+                        "referenceFrequency", 440,
+                        "bandPreset", false,
+                        "minFrequency", HPCP_MIN_FREQ,
+                        "maxFrequency", HPCP_MAX_FREQ,
+                        "weightType", "squaredCosine",
+                        "nonLinear", false,
+                        "windowSize", 4.0/3.0);
   
   c2p = factory.create("CartesianToPolar");
   
   chromagram = factory.create("Chromagram",
-                               "binsPerOctave", binsPerOctave);
-  
+                              "binsPerOctave", binsPerOctave);
+}
+
+void MLTK::connectAlgorithmStream(essentia::streaming::AlgorithmFactory& factory){
   std::cout << "-------- connecting algorithm stream --------" << std::endl;
   
-  *inputVec >> dcremoval->input("signal");  
-  dcremoval->output("signal") >> fc->input("signal");  
-  fc->output("frame") >> w->input("frame");  
-  w->output("frame") >> fft->input("frame");    
-  w->output("frame") >> rms->input("array");  
-
+  *inputVec >> dcremoval->input("signal");
+  dcremoval->output("signal") >> fc->input("signal");
+  fc->output("frame") >> w->input("frame");
+  w->output("frame") >> fft->input("frame");
+  w->output("frame") >> rms->input("array");
+  
   fft->output("fft") >> c2p->input("complex");
   c2p->output("magnitude") >> PC(pool, "magnitudes");
   c2p->output("phase") >> PC(pool, "phases");
@@ -165,7 +151,7 @@ void MLTK::setup(int frameSize, int sampleRate, int hopSize, int largeFrameSize,
   spectralPeaks->output("frequencies") >> hpcp->input("frequencies");
   spectralPeaks->output("magnitudes") >> hpcp->input("magnitudes");
   
-  // Pool Outputs
+    // Pool Outputs
   dcremoval->output("signal") >> PC(pool, "dcremoval");
   fc->output("frame") >> PC(pool, "frame");
   w->output("frame") >> PC(pool, "window");
@@ -182,25 +168,82 @@ void MLTK::setup(int frameSize, int sampleRate, int hopSize, int largeFrameSize,
   mfcc->output("mfcc") >> PC(pool, "mfcc.coefs");
   
   hpcp->output("hpcp") >> PC(pool, "hpcp");
-
+  
   lpc->output("lpc") >> PC(pool, "lpc.coefs");
   lpc->output("reflection") >> PC(pool, "lpc.reflection");
-  
+
   factory.shutdown();
+}
+
+void MLTK::setup(int frameSize, int sampleRate, int hopSize, int largeFrameSize, int largeHopSize){
+  this->frameSize = frameSize;
+  essentia::init();
+  
+  essentia::streaming::AlgorithmFactory& factory = essentia::streaming::AlgorithmFactory::instance();
+
+  factory.init();
+
+    //  map<string, vector<Real>>  typeMap = {
+    //    { "hpcp", "vector<Real>" }
+    //  };
+  
+  audioBuffer.resize(frameSize, 0.0);
+  leftAudioBuffer.getBuffer().resize(frameSize, 0.0);
+  rightAudioBuffer.getBuffer().resize(frameSize, 0.0);
+  tmpLeftBuffer.getBuffer().resize(frameSize, 0.0);
+  tmpRightBuffer.getBuffer().resize(frameSize, 0.0);
+
+  
+  setupAlgorithms(factory, frameSize, sampleRate, hopSize, largeFrameSize, largeHopSize);
+  connectAlgorithmStream(factory);
   
   network = new scheduler::Network(inputVec);
   network->run();  
 }
 
 void MLTK::run(){
+  update();
+  
   if(recording){
     aggr->input("input").set(pool);
     aggr->output("output").set(poolAggr);
     aggr->compute();
   }
+  
   pool.clear();
   network->reset();
   network->run();
+}
+
+template <class mType>
+bool MLTK::pool_contains(string algorithm){
+  return pool.contains<mType>(algorithm);
+};
+
+vector<Real> MLTK::get_vector(string algorithm){
+  vector<Real> vals = pool.value<vector<vector<Real>>>(algorithm)[0];
+  return vals;
+};
+
+vector<vector<Real>> MLTK::get_full_vector(string algorithm){
+  vector<vector<Real>> vals = pool.value<vector<vector<vector<Real>>>>(algorithm)[0];
+  return vals;
+};
+
+Real MLTK::get_real(string algorithm){
+  Real val = pool.value<vector<Real>>(algorithm)[0];
+  return val;
+};
+
+void MLTK::update(){
+  {
+    std::lock_guard<std::mutex>mtx(mutex);
+    leftAudioBuffer = tmpLeftBuffer;
+    rightAudioBuffer = tmpRightBuffer;
+  }
+  for (int i = 0; i < frameSize; i++){
+    audioBuffer[i] = (Real) ((leftAudioBuffer[i]) + (rightAudioBuffer[i])) / 2;
+  }
 }
 
 void MLTK::save(){
