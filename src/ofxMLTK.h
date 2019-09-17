@@ -81,33 +81,52 @@ using namespace essentia;
 using namespace streaming;
 using namespace scheduler;
 
+//class baseMLTK {
+//public:
+//  virtual void algorithms(bool useThisInsteadOfDefault) = 0;
+//  virtual void chain(bool useThisInsteadOfDefault) = 0;
+//};
+
 class MLTK {
 public:
   int frameSize;
   bool recording = false;
   
-  ofSoundBuffer leftAudioBuffer, rightAudioBuffer, tmpLeftBuffer, tmpRightBuffer;
+  // !!!IMPORTANT!!! To setup your own Algorithm stream set customMode to true
+  // and implement setupCustomAlgorithms)() and connectUserAlgorithmStream().
+  // setupAlgorithms() and connectAlgorithmStream() can be used as references.
+//  bool customMode = false;
+
+  // These soundbuffers contain the data coming in from openFrameworks
+  ofSoundBuffer leftAudioBuffer, rightAudioBuffer;
   
-  std::map<std::string, VectorInput<Real>> inputMap;
+  // Not currently being used
+  // std::map<std::string, VectorInput<Real>> inputMap;
   VectorInput<Real> *inputVec, *leftInputVec, *rightInputVec;
-  VectorInput<std::complex<Real>> *complexOut;
-  VectorOutput<std::vector<std::complex<Real>>> *outputVec;
   
-  essentia::streaming::RingBufferInput *ringIn;
-  essentia::streaming::RingBufferOutput *ringOut;
+  // a vector for handling input containing complex values
+//  VectorInput<std::complex<Real>> *complexInput;
+//  VectorOutput<std::vector<std::complex<Real>>> *complexOutput;
+
+  // Ring buffer provided by essentia
+  //  essentia::streaming::RingBufferInput *ringIn;
+  //  essentia::streaming::RingBufferOutput *ringOut;
   
+  // Pointer to the algorithm network
   scheduler::Network *network=NULL;
   
+  // Pool objects for collecting, aggregating, and holding statistics.
   Pool pool, poolAggr, poolStats;
+
+  // Dispatch Table, planned for future
+//  std::map<string, function<vector<Real>()>> db;
+//  map<string, Algorithm*> algoDB;
   
-  std::map<string, function<vector<Real>()>> db;
-  
-  map<string, Algorithm*> algoDB;
-  
-  void setupAlgorithms(essentia::streaming::AlgorithmFactory& factory, int frameSize, int sampleRate, int hopSize, int largeFrameSize, int largeHopSize);
-  void connectAlgorithmStream(essentia::streaming::AlgorithmFactory& factory);
-  
-  Algorithm *rms, *energy, *power, *pitchSalience,
+  // This is a list of pointers for essentia::algorithms::streaming objects
+  // this should be refactored but currently any algorithm created by the
+  // factory needs to be associated with a pointer here. The algoDB above will
+  // likely replace this in the future but it's a slightly more verbose solution.
+  Algorithm *monoLoader, *rms, *energy, *power, *pitchSalience,
   *pitchSalienceFunction, *pitchSalienceFunctionPeaks,
   *inharmonicity, *hfc, *centroid, *spectralComplexity,
   *dissonance, *rollOff, *oddToEven, *strongPeak, *strongDecay,
@@ -117,43 +136,36 @@ public:
   *tristimulus, *dcremoval, *barkExtractor, *spec, *fc, *fc2, *p2c,
   *c2p, *w, *w2, *cq, *frameToReal, *hpcp, *lpc, *spectralPeaks, *overlapAdd,
   *resampleFFT, *rhythmTransform, *poolAgg, *aggregator,
-  *realAcc, *spectrum,*triF,*superFluxF,*centroidF,*mfccF,*pspectrum, *gfcc;
-  
-//  streaming::AlgorithmFactory *factory;
-  
-  essentia::streaming::Algorithm *loudness,*flatness, *cent, *yin, *mfcc, *bfcc,
-                                 *TCent, *superFluxP;
+  *realAcc, *spectrum,*triF,*superFluxF,*centroidF,*mfccF,*pspectrum, *gfcc,
+  *loudness,*flatness, *cent, *yin, *mfcc, *bfcc, *TCent, *superFluxP;
   
   essentia::standard::Algorithm *aggr, *output;
   
-    //  Algorithm *mag;
-    //  Algorithm *constantq;
-  
-    // Vector of Values
-    //  Algorithm *constantq;
-    //  Algorithm *frameCutterC;
-  
   std::vector<Real> audioBuffer;
 
-  std::string windowType = "hamming";
+  std::string windowType = "hann";
   int binsPerOctave = 12;
   
-  void setup(int frameSize, int sampleRate, int hopSize, int largeFrameSize, int largeHopSize);
-  void setup(int frameSize, int sampleRate, int hopSize);
-
-//  mType get(string algorithm);
-
-//  Real get(string algorithm);
-//  vector<Real> get(string algorithm);
-//  vector<vector<Real>> get(string algorithm);
-
   template <class mType>
   bool pool_contains(string algorithm);
   
-//  template<class mType>
   Real get_real(string algorithm);
   vector<Real> get_vector(string algorithm);
   vector<vector<Real>> get_full_vector(string algorithm);
+  
+  void setup(int frameSize, int sampleRate, int hopSize, int largeFrameSize, int largeHopSize);
+  void setup(int frameSize, int sampleRate, int hopSize, string fileName);
+  
+  void setupAlgorithms(essentia::streaming::AlgorithmFactory& factory, int frameSize, int sampleRate, int hopSize, int largeFrameSize, int largeHopSize, string fileName);
+  void connectAlgorithmStream(essentia::streaming::AlgorithmFactory& factory);
+  
+    // this method contains the step where essentia algorithms are created by
+    // the "factory"
+//  void setupCustomAlgorithms();
+  
+    // this method is where we patch the inputs and outputs of the algorithms
+    // objects we created in the previous method.
+//  void connectCustomAlgorithmStream();
   
   void update();
   void run();
@@ -161,6 +173,5 @@ public:
   
   void exit();
 };
-
 
 #endif /* MLTK_h */

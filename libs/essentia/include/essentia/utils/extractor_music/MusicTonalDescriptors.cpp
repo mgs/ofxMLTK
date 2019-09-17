@@ -20,7 +20,7 @@
 #include "MusicTonalDescriptors.h"
 using namespace std;
 using namespace essentia;
-using namespace streaming;
+using namespace essentia::streaming;
 
 const string MusicTonalDescriptors::nameSpace="tonal.";  
 

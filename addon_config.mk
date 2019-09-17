@@ -30,6 +30,7 @@ common:
 	# but if the addon or addon libraries need special search paths they can be
 	# specified here separated by spaces or one per line using +=
 	# ADDON_INCLUDES =
+	ADDON_INCLUDES_EXCLUDE += libs/gaia/include/3rdparty/Eigen/src/Core/
 	
 	# any special flag that should be passed to the compiler when using this
 	# addon
@@ -97,41 +98,6 @@ linuxarmv7l:
 android/armeabi:	
 android/armeabi-v7a:	
 osx:
-	# osx/iOS only, any framework that should be included in the project
-	# ADDON_FRAMEWORKS =
-# ADDON_LIBS += libs/lame/lib/osx/libmp3lame.a
-# ADDON_LIBS += libs/libiconv/lib/osx/libcharset.a
-# ADDON_LIBS += libs/libiconv/lib/osx/libiconv.a
-# ADDON_LIBS += libs/ffmpeg/lib/osx/libavutil.a
-# ADDON_LIBS += libs/ffmpeg/lib/osx/libavfilter.a
-# ADDON_LIBS += libs/ffmpeg/lib/osx/libavcodec.a
-# ADDON_LIBS += libs/ffmpeg/lib/osx/libpostproc.a
-# ADDON_LIBS += libs/ffmpeg/lib/osx/libavresample.a
-# ADDON_LIBS += libs/ffmpeg/lib/osx/libavformat.a
-# ADDON_LIBS += libs/ffmpeg/lib/osx/libavdevice.a
-# ADDON_LIBS += libs/ffmpeg/lib/osx/libswresample.a
-# ADDON_LIBS += libs/ffmpeg/lib/osx/libswscale.a
-# ADDON_LIBS += libs/two-lame/lib/osx/libtwolame.a
-# ADDON_LIBS += libs/xvid/lib/osx/libxvidcore.a
-# ADDON_LIBS += libs/fftw3f/lib/osx/libfftw3f.a
-# ADDON_LIBS += libs/fftw3f/lib/linux64/libfftw3f.a
-# ADDON_LIBS += libs/taglib/lib/osx/libtag.a
-# ADDON_LIBS += libs/taglib/lib/osx/libtag_c.a
-# ADDON_LIBS += libs/chromaprint/lib/osx/libchromaprint.a
-# ADDON_LIBS += libs/chromaprint/vendor/kissfft/libkissfft.a
-# ADDON_LIBS += libs/opus/lib/osx/libopus.a
-# ADDON_LIBS += libs/libsamplerate/lib/osx/libsamplerate.a
-# ADDON_LIBS += libs/libyaml/lib/osx/libyaml.a
-# ADDON_LIBS += libs/zlib/lib/osx/libz.a
-# ADDON_LIBS += libs/kissfft/lib/osx/libkissfft.a
-# ADDON_LIBS += libs/libvpx/lib/osx/libvpx.a
-# ADDON_LIBS += libs/sndfile/lib/osx/libsndfile.a
-# ADDON_LIBS += libs/x264/lib/osx/libx264.a
-# ADDON_LIBS += libs/essentia/lib/osx/libessentia.a
-# ADDON_LIBS += libs/lzo/lib/osx/liblzo2.a
-# ADDON_LIBS += libs/xz/lib/osx/liblzma.a
-
-ADDON_FRAMEWORKS += VideoToolbox
 ADDON_LIBS += /usr/lib/libbz2.dylib
 ADDON_LIBS += /usr/lib/libiconv.dylib
 ADDON_LIBS += libs/fftw3f/lib/osx/libfftw3f.a
@@ -167,6 +133,7 @@ ADDON_LIBS += libs/openh264/lib/osx/libopenh264.a
 ADDON_LIBS += libs/openh264/lib/osx/libprocessing.a
 ADDON_LIBS += libs/x264/lib/osx/libx264.a
 ADDON_LIBS += libs/x265/lib/osx/libx265.a
+ADDON_LIBS += libs/gaia/lib/osx/libgaia2.a
 ADDON_LIBS += libs/libvpx/lib/osx/libvpx.a
 ADDON_LIBS += libs/sndfile/lib/osx/libsndfile.a
 ADDON_LIBS += libs/gnutls/lib/osx/libgnutls.dylib

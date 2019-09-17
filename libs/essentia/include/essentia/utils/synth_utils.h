@@ -21,7 +21,7 @@
 #ifndef ESSENTIA_SYNTH_UTILS_H
 #define ESSENTIA_SYNTH_UTILS_H
 
-#include <algorithmfactory.h>
+#include <essentia/algorithmfactory.h>
 
 
 namespace essentia{
