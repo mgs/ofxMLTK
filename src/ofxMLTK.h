@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Michael Simpson [http://mgs.nyc/]
+ * Copyright (C) 2019 Michael Simpson [https://mgs.nyc/]
  *
  * ofxMLTK is free software: you can redistribute it and/or modify it under
  * the terms of the GNU Affero General Public License as published by the Free
@@ -47,34 +47,6 @@
 #include "streaming/accumulatoralgorithm.h"
 #include "scheduler/network.h"
 
-  //----------------------------------
-  //for scaling values:
-#define DB_MIN -6
-#define DB_MAX 0
-#define MFCC_MAX_ESTIMATED_VALUE 300.0
-  //----------------------------------
-  //Vars for algorithm creation:
-#define MELBANDS_BANDS_NUM 256
-#define DCT_COEFF_NUM 13
-#define PITCH_SALIENCE_FUNC_NUM 10
-#define TRISTIMULUS_BANDS_NUM 3
-
-#define HPCP_SIZE 12
-#define HPCP_MIN_FREQ 40.0//hz
-#define HPCP_MAX_FREQ 5000.0//hz
-
-#define PEAKS_MAXPEAKS_NUM 10000
-#define PEAKS_MIN_FREQ 40.0//hz
-#define PEAKS_MAX_FREQ 5000.0//hz
-
-#define LPC_COEFS 70
-#define LPC_MIN -1.0
-#define LPC_MAX 1.0
-  //----------------------------------
-  // multiply novelty function and threshold for easier parameterization,
-  // the true computation is Not Multiplied, only inputs and outputs
-#define NOVELTY_MULT 1
-
 using namespace std;
 using namespace chrono;
 using namespace essentia;
@@ -89,7 +61,6 @@ using namespace scheduler;
 
 class MLTK {
 public:
-  int frameSize;
   bool recording = false;
   
   // !!!IMPORTANT!!! To setup your own Algorithm stream set customMode to true
@@ -120,52 +91,44 @@ public:
 
   // Dispatch Table, planned for future
 //  std::map<string, function<vector<Real>()>> db;
-//  map<string, Algorithm*> algoDB;
+  map<string, Algorithm*> algorithms;
   
-  // This is a list of pointers for essentia::algorithms::streaming objects
-  // this should be refactored but currently any algorithm created by the
-  // factory needs to be associated with a pointer here. The algoDB above will
-  // likely replace this in the future but it's a slightly more verbose solution.
-  Algorithm *monoLoader, *rms, *energy, *power, *pitchSalience,
-  *pitchSalienceFunction, *pitchSalienceFunctionPeaks,
-  *inharmonicity, *hfc, *centroid, *spectralComplexity,
-  *dissonance, *rollOff, *oddToEven, *strongPeak, *strongDecay,
-  *onsetHfc, *onsetComplex, *onsetFlux, *pitchDetect, *env,
-  *dct, *melBands, *fft, *fft2, *ifft, *fftc, *ifftc, *harmonicPeaks,
-  *chromagram, *chromaprinter, *spectrumcq, *bandPass, *superFlux,
-  *tristimulus, *dcremoval, *barkExtractor, *spec, *fc, *fc2, *p2c,
-  *c2p, *w, *w2, *cq, *frameToReal, *hpcp, *lpc, *spectralPeaks, *overlapAdd,
-  *resampleFFT, *rhythmTransform, *poolAgg, *aggregator,
-  *realAcc, *spectrum,*triF,*superFluxF,*centroidF,*mfccF,*pspectrum, *gfcc,
-  *loudness,*flatness, *cent, *yin, *mfcc, *bfcc, *TCent, *superFluxP;
+  string fileName;
   
+    // This should match the number of input channels in your input
+  int numberOfOutputChannels = 0;
+    // This should match the number of input channels in your input
+  int numberOfInputChannels = 2;
+    // the sampleRate should match the rate of of your sound card, you can check
+    // this "Audio MIDI Setup.app" found in the Utilities folder of Applications
+  int sampleRate = 44100;
+    // Try experimenting with different frameSize
+    // You can try: 64, 128, 256, 512, 1024, 2048, 4096
+  int frameSize = 1024;
+
+  int hopSize = frameSize/2;
+
+    // Try some different values like: 1, 2, 4, 8. Do you notice anything?
+  int numberOfBuffers = 4;
+
   essentia::standard::Algorithm *aggr, *output;
   
   std::vector<Real> audioBuffer;
 
-  std::string windowType = "hann";
   int binsPerOctave = 12;
   
   template <class mType>
-  bool pool_contains(string algorithm);
+  bool exists(string algorithm);
   
-  Real get_real(string algorithm);
-  vector<Real> get_vector(string algorithm);
-  vector<vector<Real>> get_full_vector(string algorithm);
+  Real getValue(string algorithm);
+  vector<Real> getData(string algorithm);
+  vector<vector<Real>> getRaw(string algorithm);
   
-  void setup(int frameSize, int sampleRate, int hopSize, int largeFrameSize, int largeHopSize);
-  void setup(int frameSize, int sampleRate, int hopSize, string fileName);
+  void setup(int frameSize, int sampleRate, int hopSize);
   
-  void setupAlgorithms(essentia::streaming::AlgorithmFactory& factory, int frameSize, int sampleRate, int hopSize, int largeFrameSize, int largeHopSize, string fileName);
+  void setupAlgorithms(essentia::streaming::AlgorithmFactory& factory);
+  
   void connectAlgorithmStream(essentia::streaming::AlgorithmFactory& factory);
-  
-    // this method contains the step where essentia algorithms are created by
-    // the "factory"
-//  void setupCustomAlgorithms();
-  
-    // this method is where we patch the inputs and outputs of the algorithms
-    // objects we created in the previous method.
-//  void connectCustomAlgorithmStream();
   
   void update();
   void run();
