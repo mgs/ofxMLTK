@@ -14,13 +14,11 @@ void ofApp::setup(){
   int numberOfInputChannels = 2;
   int sampleRate = 44100;
   int frameSize = 512;
-  int largeFrameSize = 32768;
-  int numberOfBuffers = 4;
   int hopSize = 256;
-  int largeHopSize = 32768;
+  int numberOfBuffers = 4;
   
   soundStream.setup(numberOfOutputChannels, numberOfInputChannels, sampleRate, frameSize, numberOfBuffers);
-  mltk.setup(frameSize, sampleRate, hopSize, largeFrameSize, largeHopSize);
+  mltk.setup(frameSize, sampleRate, hopSize);
   mltk.run();
 }
 
@@ -31,13 +29,14 @@ void ofApp::update(){
 
 //--------------------------------------------------------------
 void ofApp::draw(){
-  const vector<Real> &hpcp = mltk.pool.value<vector<vector<Real>>>("hpcp")[0];
+  const Real &rms = mltk.getValue("RMS");
+  const vector<Real> &spec = mltk.getData("Spectrum");
   
   ofFill();
   ofSetColor(0,0,0);
   
-  for(int i = 0; i < hpcp.size(); i++){
-    ofDrawRectangle(i*(ofGetWidth()/hpcp.size()), 0, 100, abs(hpcp[i])*ofGetHeight());
+  for(int i = 0; i < spec.size(); i++){
+    ofDrawRectangle(i*(ofGetWidth()/spec.size()), ofGetHeight()/2, ofGetWidth()/spec.size(), abs(spec[i])*ofGetHeight());
   }
   
 }
