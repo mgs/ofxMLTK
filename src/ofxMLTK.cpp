@@ -52,6 +52,8 @@ void MLTK::setupAlgorithms(essentia::streaming::AlgorithmFactory& factory){
                                   "sampleRate", sampleRate) },
     
     { "Spectrum", factory.create("Spectrum") },
+
+    { "SpectralPeaks", factory.create("SpectralPeaks") },
     
     { "RMS",  factory.create("RMS") },
     
@@ -60,8 +62,12 @@ void MLTK::setupAlgorithms(essentia::streaming::AlgorithmFactory& factory){
     { "InstantPower",  factory.create("InstantPower") },
     
     { "Centroid",  factory.create("Centroid", "range", sampleRate/2) },
-    
+
     { "MFCC", factory.create("MFCC") },
+
+    { "HPCP", factory.create("HPCP") },
+
+    { "PoolAggregator", factory.create("PoolAggregator") }
   };
 }
 
@@ -78,7 +84,10 @@ void MLTK::connectAlgorithmStream(essentia::streaming::AlgorithmFactory& factory
   algorithms["FrameCutter"]->output("frame") >> algorithms["Windowing"]->input("frame");
   algorithms["Windowing"]->output("frame") >> algorithms["RMS"]->input("array");
   algorithms["Windowing"]->output("frame") >> algorithms["Spectrum"]->input("frame");
-  algorithms["Spectrum"]->output("spectrum")  >> algorithms["MFCC"]->input("spectrum");
+  algorithms["Spectrum"]->output("spectrum") >> algorithms["MFCC"]->input("spectrum");
+  algorithms["Spectrum"]->output("spectrum") >> algorithms["SpectralPeaks"]->input("spectrum");
+  algorithms["SpectralPeaks"]->output("frequencies") >> algorithms["HPCP"]->input("frequencies");
+  algorithms["SpectralPeaks"]->output("magnitudes") >> algorithms["HPCP"]->input("magnitudes");
   
     // Pool Outputs
   algorithms["DCRemoval"]->output("signal") >> PC(pool, "DCRemoval");
@@ -88,6 +97,7 @@ void MLTK::connectAlgorithmStream(essentia::streaming::AlgorithmFactory& factory
   algorithms["Spectrum"]->output("spectrum")  >>  PC(pool, "Spectrum");
   algorithms["MFCC"]->output("mfcc") >> PC(pool, "MFCC.coefs");
   algorithms["MFCC"]->output("bands") >> PC(pool, "MFCC.bands");
+  algorithms["HPCP"]->output("hpcp") >> PC(pool, "HPCP");
   
   factory.shutdown();
 }
@@ -100,7 +110,6 @@ void MLTK::setup(int frameSize=1024, int sampleRate=44100, int hopSize=512){
   essentia::init();
   
   essentia::streaming::AlgorithmFactory& factory = essentia::streaming::AlgorithmFactory::instance();
-  
   factory.init();
   
   audioBuffer.resize(frameSize, 0.0);
