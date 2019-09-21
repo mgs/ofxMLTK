@@ -111,11 +111,13 @@ void MLTK::setup(int frameSize=1024, int sampleRate=44100, int hopSize=512){
   
   essentia::streaming::AlgorithmFactory& factory = essentia::streaming::AlgorithmFactory::instance();
   factory.init();
-  
+
   audioBuffer.resize(frameSize, 0.0);
-  leftAudioBuffer.getBuffer().resize(frameSize, 0.0);
-  rightAudioBuffer.getBuffer().resize(frameSize, 0.0);
-  
+  ch1Buffer.getBuffer().resize(frameSize, 0.0);
+  ch2Buffer.getBuffer().resize(frameSize, 0.0);
+  ch3Buffer.getBuffer().resize(frameSize, 0.0);
+  ch4Buffer.getBuffer().resize(frameSize, 0.0);
+
   setupAlgorithms(factory);
   connectAlgorithmStream(factory);
   
@@ -166,7 +168,7 @@ void MLTK::update(){
     //    leftAudioBuffer = tmpLeftBuffer;
     //    rightAudioBuffer = tmpRightBuffer;
   for (int i = 0; i < frameSize; i++){
-    audioBuffer[i] = (Real) ((leftAudioBuffer[i]) + (rightAudioBuffer[i])) / 2;
+    audioBuffer[i] = (Real) (ch1Buffer[i] + ch2Buffer[i] + ch3Buffer[i] + ch4Buffer[i]) / 4;
   }
     //  }
 }

@@ -66,10 +66,11 @@ public:
   // !!!IMPORTANT!!! To setup your own Algorithm stream set customMode to true
   // and implement setupCustomAlgorithms)() and connectUserAlgorithmStream().
   // setupAlgorithms() and connectAlgorithmStream() can be used as references.
-//  bool customMode = false;
+  //  bool customMode = false;
 
   // These soundbuffers contain the data coming in from openFrameworks
-  ofSoundBuffer leftAudioBuffer, rightAudioBuffer;
+  // ofSoundBuffer leftAudioBuffer, rightAudioBuffer;
+  ofSoundBuffer ch1Buffer, ch2Buffer, ch3Buffer, ch4Buffer;
   
   // Not currently being used
   // std::map<std::string, VectorInput<Real>> inputMap;
@@ -98,7 +99,7 @@ public:
     // This should match the number of input channels in your input
   int numberOfOutputChannels = 0;
     // This should match the number of input channels in your input
-  int numberOfInputChannels = 2;
+  int numberOfInputChannels = 4;
     // the sampleRate should match the rate of of your sound card, you can check
     // this "Audio MIDI Setup.app" found in the Utilities folder of Applications
   int sampleRate = 44100;
