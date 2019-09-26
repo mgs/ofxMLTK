@@ -69,12 +69,12 @@ public:
   //  bool customMode = false;
 
   // These soundbuffers contain the data coming in from openFrameworks
-  // ofSoundBuffer leftAudioBuffer, rightAudioBuffer;
-  ofSoundBuffer ch1Buffer, ch2Buffer, ch3Buffer, ch4Buffer;
+  map<int, ofSoundBuffer> channelBuffers;
   
   // Not currently being used
   // std::map<std::string, VectorInput<Real>> inputMap;
-  VectorInput<Real> *inputVec, *leftInputVec, *rightInputVec;
+  VectorInput<Real> *monoInputVec;
+  map<int, VectorInput<Real>*> channelInputVectors;
   
   // a vector for handling input containing complex values
 //  VectorInput<std::complex<Real>> *complexInput;
@@ -85,15 +85,20 @@ public:
   //  essentia::streaming::RingBufferOutput *ringOut;
   
   // Pointer to the algorithm network
-  scheduler::Network *network=NULL;
-  
+  scheduler::Network *monoNetwork=NULL;
+  map<int, scheduler::Network *> chNetworks;
+
   // Pool objects for collecting, aggregating, and holding statistics.
   Pool pool, poolAggr, poolStats;
+  map<int, Pool> chPools;
+  map<int, Pool> chPoolAggrs;
+  map<int, Pool> chPoolStats;
 
   // Dispatch Table, planned for future
 //  std::map<string, function<vector<Real>()>> db;
-  map<string, Algorithm*> algorithms;
-  
+  map<string, Algorithm*> monoAlgorithms;
+  map<int, map<string, Algorithm*>> chAlgorithms;
+
   string fileName;
   
     // This should match the number of input channels in your input
@@ -113,23 +118,29 @@ public:
   int numberOfBuffers = 4;
 
   essentia::standard::Algorithm *aggr, *output;
-  
-  std::vector<Real> audioBuffer;
+  map<int, essentia::standard::Algorithm*> chAggr, chOutput;
+
+  vector<Real> monoAudioBuffer;
 
   int binsPerOctave = 12;
   
   template <class mType>
   bool exists(string algorithm);
   
-  Real getValue(string algorithm);
-  vector<Real> getData(string algorithm);
-  vector<vector<Real>> getRaw(string algorithm);
+  Real getValue(string algorithm, int channel = 0);
+  vector<Real> getData(string algorithm, int channel = 0);
+  vector<vector<Real>> getRaw(string algorithm, int channel = 0);
   
   void setup(int frameSize, int sampleRate, int hopSize);
   
-  void setupAlgorithms(essentia::streaming::AlgorithmFactory& factory);
+  void setupAlgorithms(essentia::streaming::AlgorithmFactory& factory,
+                       VectorInput<Real>& inputVec,
+                       vector<Real>& audioBuffer,
+                       map<string, Algorithm*>& algorithms);
   
-  void connectAlgorithmStream(essentia::streaming::AlgorithmFactory& factory);
+  void connectAlgorithmStream(essentia::streaming::AlgorithmFactory& factory,
+                              VectorInput<Real>& inputVec,
+                              map<string, Algorithm*>& algorithms);
   
   void update();
   void run();
