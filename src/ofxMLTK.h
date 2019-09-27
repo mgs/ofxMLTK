@@ -61,19 +61,29 @@ using namespace scheduler;
 
 class MLTK {
 public:
+  // This boolean is used to toggle the recording of data to an output
+  // file in the YAML format. YAML is a data format similar to JSON
   bool recording = false;
   
-  // !!!IMPORTANT!!! To setup your own Algorithm stream set customMode to true
-  // and implement setupCustomAlgorithms)() and connectUserAlgorithmStream().
-  // setupAlgorithms() and connectAlgorithmStream() can be used as references.
-//  bool customMode = false;
-
+  // This boolean controls whether the pool should accumulate values or
+  // be cleared on each frame
+  bool accumulating = false;
+  
+  // NOT CURRENTLY IMPLEMENTED
+//  // !!!IMPORTANT!!! To setup your own Algorithm stream set customMode to true
+//  // and implement setupCustomAlgorithms)() and connectUserAlgorithmStream().
+//  // setupAlgorithms() and connectAlgorithmStream() can be used as references.
+//  //  bool customMode = false;
+  // NOT CURRENTLY IMPLEMENTED
+  
   // These soundbuffers contain the data coming in from openFrameworks
   ofSoundBuffer leftAudioBuffer, rightAudioBuffer;
   
   // Not currently being used
   // std::map<std::string, VectorInput<Real>> inputMap;
   VectorInput<Real> *inputVec, *leftInputVec, *rightInputVec;
+  
+  VectorInput<Real> *inputX;
   
   // a vector for handling input containing complex values
 //  VectorInput<std::complex<Real>> *complexInput;
@@ -106,6 +116,8 @@ public:
   
   std::vector<Real> audioBuffer;
 
+  std::vector<Real> smoothInput;
+  
   int binsPerOctave = 12;
   
   template <class mType>
@@ -120,7 +132,8 @@ public:
   void setupAlgorithms(essentia::streaming::AlgorithmFactory& factory);
   
   void connectAlgorithmStream(essentia::streaming::AlgorithmFactory& factory);
-  
+//  void create(map<string, Algorithm*> m, string algo);
+    
   void update();
   void run();
   void save();
