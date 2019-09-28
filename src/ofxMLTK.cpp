@@ -26,13 +26,13 @@
 #include "ofxMLTK.h"
 
 void MLTK::setupAlgorithms(essentia::streaming::AlgorithmFactory& f,
-                           VectorInput<Real> inputVec,
+                           VectorInput<Real>* inputVec,
                            vector<Real> audioBuffer,
                            map<string, Algorithm*>& algorithms) {
     // Using Essentia's VectorInput type and pointing it at the audioBuffer reference
   inputVec = new VectorInput<Real>(&audioBuffer);
   //  inputX = new VectorInput<Real>(&smoothingBuffer);
-  inputVec.setVector(&audioBuffer);
+  inputVec->setVector(&audioBuffer);
   //  inputX->setVector(&smoothingBuffer);
 
     // if a file is passed, load it into one of essentia's MonoLoader objects
@@ -679,12 +679,12 @@ void MLTK::setupAlgorithms(essentia::streaming::AlgorithmFactory& f,
 
 
 void MLTK::connectAlgorithmStream(essentia::streaming::AlgorithmFactory& factory,
-                                  VectorInput<Real> inputVec,
+                                  VectorInput<Real>* inputVec,
                                   map<string, Algorithm*>& algorithms) {
   std::cout << "-------- connecting algorithm stream --------" << std::endl;
 
   // We start with the incoming signal that was attached to inputVec
-  inputVec >> algorithms["DCRemoval"]->input("signal");
+  *inputVec >> algorithms["DCRemoval"]->input("signal");
 
   // Remember that all the strings match 1:1 with Essentia's reference documentation.
   // Algorithms can have an unlimited number of OUTPUTS but every input must

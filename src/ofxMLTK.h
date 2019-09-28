@@ -132,12 +132,12 @@ public:
   void setup(int frameSize, int sampleRate, int hopSize);
   
   void setupAlgorithms(essentia::streaming::AlgorithmFactory& factory,
-                       VectorInput<Real> inputVec,
+                       VectorInput<Real>* inputVec,
                        vector<Real> audioBuffer,
                        map<string, Algorithm*>& algorithms);
 
   void connectAlgorithmStream(essentia::streaming::AlgorithmFactory& factory,
-                              VectorInput<Real> inputVec,
+                              VectorInput<Real>* inputVec,
                               map<string, Algorithm*>& algorithms);
 
   void update();
