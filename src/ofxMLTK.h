@@ -61,21 +61,22 @@ using namespace scheduler;
 
 class MLTK {
 public:
+  // This boolean is used to toggle the recording of data to an output
+  // file in the YAML format. YAML is a data format similar to JSON
   bool recording = false;
-  
-  // !!!IMPORTANT!!! To setup your own Algorithm stream set customMode to true
-  // and implement setupCustomAlgorithms)() and connectUserAlgorithmStream().
-  // setupAlgorithms() and connectAlgorithmStream() can be used as references.
-  //  bool customMode = false;
+
+  // This boolean controls whether the pool should accumulate values or
+  // be cleared on each frame
+  bool accumulating = false;
 
   // These soundbuffers contain the data coming in from openFrameworks
-  map<int, ofSoundBuffer> channelBuffers;
-  
-  // Not currently being used
-  // std::map<std::string, VectorInput<Real>> inputMap;
+  map<int, ofSoundBuffer> channelSoundBuffers;
+
   VectorInput<Real> *monoInputVec;
   map<int, VectorInput<Real>*> channelInputVectors;
-  
+
+  VectorInput<Real> *inputX;
+
   // a vector for handling input containing complex values
 //  VectorInput<std::complex<Real>> *complexInput;
 //  VectorOutput<std::vector<std::complex<Real>>> *complexOutput;
@@ -83,7 +84,7 @@ public:
   // Ring buffer provided by essentia
   //  essentia::streaming::RingBufferInput *ringIn;
   //  essentia::streaming::RingBufferOutput *ringOut;
-  
+
   // Pointer to the algorithm network
   scheduler::Network *monoNetwork=NULL;
   map<int, scheduler::Network *> chNetworks;
@@ -101,26 +102,23 @@ public:
 
   string fileName;
   
-    // This should match the number of input channels in your input
   int numberOfOutputChannels = 0;
-    // This should match the number of input channels in your input
+  // This should match the number of input channels in your input
   int numberOfInputChannels = 4;
-    // the sampleRate should match the rate of of your sound card, you can check
-    // this "Audio MIDI Setup.app" found in the Utilities folder of Applications
+  // the sampleRate should match the rate of of your sound card, you can check
+  // this "Audio MIDI Setup.app" found in the Utilities folder of Applications
   int sampleRate = 44100;
-    // Try experimenting with different frameSize
-    // You can try: 64, 128, 256, 512, 1024, 2048, 4096
   int frameSize = 1024;
-
   int hopSize = frameSize/2;
-
-    // Try some different values like: 1, 2, 4, 8. Do you notice anything?
-  int numberOfBuffers = 4;
+  int numberOfBuffers = 1;
 
   essentia::standard::Algorithm *aggr, *output;
   map<int, essentia::standard::Algorithm*> chAggr, chOutput;
 
   vector<Real> monoAudioBuffer;
+  map<int, vector<Real>> channelAudioBuffers;
+
+  std::vector<Real> smoothInput;
 
   int binsPerOctave = 12;
   
@@ -134,18 +132,17 @@ public:
   void setup(int frameSize, int sampleRate, int hopSize);
   
   void setupAlgorithms(essentia::streaming::AlgorithmFactory& factory,
-                       VectorInput<Real>& inputVec,
-                       vector<Real>& audioBuffer,
+                       VectorInput<Real> inputVec,
+                       vector<Real> audioBuffer,
                        map<string, Algorithm*>& algorithms);
-  
+
   void connectAlgorithmStream(essentia::streaming::AlgorithmFactory& factory,
-                              VectorInput<Real>& inputVec,
+                              VectorInput<Real> inputVec,
                               map<string, Algorithm*>& algorithms);
-  
+
   void update();
   void run();
   void save();
-  
   void exit();
 };
 
