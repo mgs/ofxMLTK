@@ -679,12 +679,12 @@ void MLTK::setupAlgorithms(essentia::streaming::AlgorithmFactory& f,
 
 
 void MLTK::connectAlgorithmStream(essentia::streaming::AlgorithmFactory& factory,
-                                  VectorInput<Real>* inputVec,
+                                  VectorInput<Real> inputVec,
                                   map<string, Algorithm*>& algorithms) {
   std::cout << "-------- connecting algorithm stream --------" << std::endl;
 
   // We start with the incoming signal that was attached to inputVec
-  *inputVec >> algorithms["DCRemoval"]->input("signal");
+  inputVec >> algorithms["DCRemoval"]->input("signal");
 
   // Remember that all the strings match 1:1 with Essentia's reference documentation.
   // Algorithms can have an unlimited number of OUTPUTS but every input must
@@ -790,15 +790,15 @@ bool MLTK::exists(string algorithm){
 };
 
 vector<Real> MLTK::getData(string algorithm, int channel){
-    return (channel == 0 ? pool : chPools[channel]).value<vector<vector<Real>>>(algorithm)[0];
+    return (channel < 0 ? pool : chPools[channel]).value<vector<vector<Real>>>(algorithm)[0];
 };
 
 vector<vector<Real>> MLTK::getRaw(string algorithm, int channel){
-  return (channel == 0 ? pool : chPools[channel]).value<vector<vector<Real>>>(algorithm);
+  return (channel < 0 ? pool : chPools[channel]).value<vector<vector<Real>>>(algorithm);
 };
 
 Real MLTK::getValue(string algorithm, int channel){
-  Real val = (channel == 0 ? pool : chPools[channel]).value<vector<Real>>(algorithm)[0];
+  Real val = (channel < 0 ? pool : chPools[channel]).value<vector<Real>>(algorithm)[0];
   return val;
 };
 

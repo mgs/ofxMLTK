@@ -125,9 +125,10 @@ public:
   template <class mType>
   bool exists(string algorithm);
   
-  Real getValue(string algorithm, int channel = 0);
-  vector<Real> getData(string algorithm, int channel = 0);
-  vector<vector<Real>> getRaw(string algorithm, int channel = 0);
+  // -1 = mono aggregate channel
+  Real getValue(string algorithm, int channel = -1);
+  vector<Real> getData(string algorithm, int channel = -1);
+  vector<vector<Real>> getRaw(string algorithm, int channel = -1);
   
   void setup(int frameSize, int sampleRate, int hopSize);
   
@@ -137,7 +138,7 @@ public:
                        map<string, Algorithm*>& algorithms);
 
   void connectAlgorithmStream(essentia::streaming::AlgorithmFactory& factory,
-                              VectorInput<Real>* inputVec,
+                              VectorInput<Real> inputVec,
                               map<string, Algorithm*>& algorithms);
 
   void update();
