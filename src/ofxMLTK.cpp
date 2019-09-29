@@ -28,22 +28,22 @@
 void MLTK::setupAlgorithms(essentia::streaming::AlgorithmFactory& f,
                            VectorInput<Real>* inputVec,
                            vector<Real> audioBuffer,
-                           map<string, Algorithm*>& algorithms) {
+                           map<string, Algorithm*>* algorithms) {
     // Using Essentia's VectorInput type and pointing it at the audioBuffer reference
   inputVec = new VectorInput<Real>(&audioBuffer);
   //  inputX = new VectorInput<Real>(&smoothingBuffer);
   inputVec->setVector(&audioBuffer);
   //  inputX->setVector(&smoothingBuffer);
 
-    // if a file is passed, load it into one of essentia's MonoLoader objects
-    // which creates a mono data stream, demuxing stereo if needed.
+  // if a file is passed, load it into one of essentia's MonoLoader objects
+  // which creates a mono data stream, demuxing stereo if needed.
   if (fileName.length() > 0) {
-    algorithms["MonoLoader"] = f.create("MonoLoader",
-                                        "filename", fileName,
-                                        "sampleRate", sampleRate);
+//    *algorithms["MonoLoader"] = f.create("MonoLoader",
+//                                        "filename", fileName,
+//                                        "sampleRate", sampleRate);
   }
 
-  algorithms = {
+  *algorithms = {
     // Envelope/SFX category
     //
     // afterMaxToBeforeMaxEnergyRatio
@@ -679,12 +679,12 @@ void MLTK::setupAlgorithms(essentia::streaming::AlgorithmFactory& f,
 
 
 void MLTK::connectAlgorithmStream(essentia::streaming::AlgorithmFactory& factory,
-                                  VectorInput<Real> inputVec,
-                                  map<string, Algorithm*>& algorithms) {
+                                  VectorInput<Real>* inputVec,
+                                  map<string, Algorithm*> algorithms) {
   std::cout << "-------- connecting algorithm stream --------" << std::endl;
 
   // We start with the incoming signal that was attached to inputVec
-  inputVec >> algorithms["DCRemoval"]->input("signal");
+  *inputVec >> algorithms["DCRemoval"]->input("signal");
 
   // Remember that all the strings match 1:1 with Essentia's reference documentation.
   // Algorithms can have an unlimited number of OUTPUTS but every input must
@@ -727,7 +727,7 @@ void MLTK::setup(int frameSize=1024, int sampleRate=44100, int hopSize=512){
   factory.init();
 
   
-  setupAlgorithms(factory, monoInputVec, monoAudioBuffer, monoAlgorithms);
+  setupAlgorithms(factory, monoInputVec, monoAudioBuffer, &monoAlgorithms);
   connectAlgorithmStream(factory, monoInputVec, monoAlgorithms);
 
   for (int i = 0; i < numberOfInputChannels; i++) {
@@ -738,7 +738,8 @@ void MLTK::setup(int frameSize=1024, int sampleRate=44100, int hopSize=512){
     // setting the vector happens in setupAlgorithms() now
     // channelInputVectors[i] = new VectorInput<Real>(&channelBuffers[i]);
     // channelInputVectors[i]->setVector(&channelBuffers[i]);
-    setupAlgorithms(factory, channelInputVectors[i], channelAudioBuffers[i], chAlgorithms[i]);
+    chAlgorithms[i] = map<string, Algorithm*>();
+    setupAlgorithms(factory, channelInputVectors[i], channelAudioBuffers[i], &chAlgorithms[i]);
     connectAlgorithmStream(factory, channelInputVectors[i], chAlgorithms[i]);
   }
 

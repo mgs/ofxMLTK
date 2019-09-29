@@ -26,9 +26,6 @@
 #define ofxMLTK_h
 
 #pragma once
-//#include <ctime>
-//using namespace std;
-//#include "ofMain.h"
 
 #include <cmath>
 #include <functional>
@@ -97,8 +94,8 @@ public:
 
   // Dispatch Table, planned for future
 //  std::map<string, function<vector<Real>()>> db;
-  map<string, Algorithm*> monoAlgorithms;
-  map<int, map<string, Algorithm*>> chAlgorithms;
+  map<string, essentia::streaming::Algorithm*> monoAlgorithms;
+  map<int, map<string, essentia::streaming::Algorithm*>> chAlgorithms;
 
   string fileName;
   
@@ -118,7 +115,7 @@ public:
   vector<Real> monoAudioBuffer;
   map<int, vector<Real>> channelAudioBuffers;
 
-  std::vector<Real> smoothInput;
+  vector<Real> smoothInput;
 
   int binsPerOctave = 12;
   
@@ -135,11 +132,11 @@ public:
   void setupAlgorithms(essentia::streaming::AlgorithmFactory& factory,
                        VectorInput<Real>* inputVec,
                        vector<Real> audioBuffer,
-                       map<string, Algorithm*>& algorithms);
+                       map<string, Algorithm*>* algorithms);
 
   void connectAlgorithmStream(essentia::streaming::AlgorithmFactory& factory,
-                              VectorInput<Real> inputVec,
-                              map<string, Algorithm*>& algorithms);
+                              VectorInput<Real>* inputVec,
+                              map<string, Algorithm*> algorithms);
 
   void update();
   void run();
