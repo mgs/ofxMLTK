@@ -26,24 +26,16 @@
 #include "ofxMLTK.h"
 
 void MLTK::setupAlgorithms(essentia::streaming::AlgorithmFactory& f,
-                           VectorInput<Real>* inputVec,
                            vector<Real> audioBuffer,
-                           map<string, Algorithm*>* algorithms) {
-    // Using Essentia's VectorInput type and pointing it at the audioBuffer reference
-  inputVec = new VectorInput<Real>(&audioBuffer);
+                           int channel) {
+
+  // Using Essentia's VectorInput type and pointing it at the audioBuffer reference
+  VectorInput<Real>* newInputVec = new VectorInput<Real>(&audioBuffer);
   //  inputX = new VectorInput<Real>(&smoothingBuffer);
-  inputVec->setVector(&audioBuffer);
+  newInputVec->setVector(&audioBuffer);
   //  inputX->setVector(&smoothingBuffer);
 
-  // if a file is passed, load it into one of essentia's MonoLoader objects
-  // which creates a mono data stream, demuxing stereo if needed.
-  if (fileName.length() > 0) {
-//    *algorithms["MonoLoader"] = f.create("MonoLoader",
-//                                        "filename", fileName,
-//                                        "sampleRate", sampleRate);
-  }
-
-  *algorithms = {
+  map<string, essentia::streaming::Algorithm*> algorithms = {
     // Envelope/SFX category
     //
     // afterMaxToBeforeMaxEnergyRatio
@@ -675,6 +667,22 @@ void MLTK::setupAlgorithms(essentia::streaming::AlgorithmFactory& f,
                              "normalize", "unit_sum",
                              "highFrequencyBound", 12000) },
   };
+  
+  // if a file is passed, load it into one of essentia's MonoLoader objects
+  // which creates a mono data stream, demuxing stereo if needed.
+  if (fileName.length() > 0) {
+    algorithms["MonoLoader"] = f.create("MonoLoader",
+                                        "filename", fileName,
+                                        "sampleRate", sampleRate);
+  }
+  
+  if (channel == -1) {
+    monoInputVec = newInputVec;
+    monoAlgorithms = algorithms;
+  } else {
+    channelInputVectors[channel] = newInputVec;
+    chAlgorithms[channel] = algorithms;
+  }
 }
 
 
@@ -694,7 +702,8 @@ void MLTK::connectAlgorithmStream(essentia::streaming::AlgorithmFactory& factory
   algorithms["FrameCutter"]->output("frame") >> algorithms["Windowing"]->input("frame");
   algorithms["Windowing"]->output("frame") >> algorithms["RMS"]->input("array");
   algorithms["Windowing"]->output("frame") >> algorithms["Spectrum"]->input("frame");
-  algorithms["Windowing"]->output("frame") >> algorithms["Chromagram"]->input("frame");
+  // TODO: connect to a sink
+  // algorithms["Windowing"]->output("frame") >> algorithms["Chromagram"]->input("frame");
   algorithms["Spectrum"]->output("spectrum")  >> algorithms["MFCC"]->input("spectrum");
   algorithms["Spectrum"]->output("spectrum") >> algorithms["SpectralPeaks"]->input("spectrum");
   algorithms["SpectralPeaks"]->output("frequencies") >> algorithms["HPCP"]->input("frequencies");
@@ -722,12 +731,10 @@ void MLTK::setup(int frameSize=1024, int sampleRate=44100, int hopSize=512){
   }
 
   essentia::init();
-
   essentia::streaming::AlgorithmFactory& factory = essentia::streaming::AlgorithmFactory::instance();
   factory.init();
 
-  
-  setupAlgorithms(factory, monoInputVec, monoAudioBuffer, &monoAlgorithms);
+  setupAlgorithms(factory, monoAudioBuffer);
   connectAlgorithmStream(factory, monoInputVec, monoAlgorithms);
 
   for (int i = 0; i < numberOfInputChannels; i++) {
@@ -739,7 +746,7 @@ void MLTK::setup(int frameSize=1024, int sampleRate=44100, int hopSize=512){
     // channelInputVectors[i] = new VectorInput<Real>(&channelBuffers[i]);
     // channelInputVectors[i]->setVector(&channelBuffers[i]);
     chAlgorithms[i] = map<string, Algorithm*>();
-    setupAlgorithms(factory, channelInputVectors[i], channelAudioBuffers[i], &chAlgorithms[i]);
+    setupAlgorithms(factory, channelAudioBuffers[i], i);
     connectAlgorithmStream(factory, channelInputVectors[i], chAlgorithms[i]);
   }
 
