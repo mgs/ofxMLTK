@@ -700,8 +700,7 @@ void MLTK::setupAlgorithms(essentia::streaming::AlgorithmFactory& f,
 }
 
 
-void MLTK::connectAlgorithmStream(essentia::streaming::AlgorithmFactory& factory,
-                                  VectorInput<Real>* inputVec,
+void MLTK::connectAlgorithmStream(VectorInput<Real>* inputVec,
                                   map<string, Algorithm*> algorithms,
                                   Pool pool) {
   std::cout << "-------- connecting algorithm stream --------" << std::endl;
@@ -750,14 +749,14 @@ void MLTK::setup(int frameSize=1024, int sampleRate=44100, int hopSize=512){
   factory.init();
 
   setupAlgorithms(factory, monoAudioBuffer);
-  connectAlgorithmStream(factory, monoInputVec, monoAlgorithms, monoPool);
+  connectAlgorithmStream(monoInputVec, monoAlgorithms, &monoPool);
 
   for (int i = 0; i < numberOfInputChannels; i++) {
     // setting the vector happens in setupAlgorithms() now
     // channelInputVectors[i] = new VectorInput<Real>(&channelBuffers[i]);
     // channelInputVectors[i]->setVector(&channelBuffers[i]);
     setupAlgorithms(factory, channelAudioBuffers[i], i);
-    connectAlgorithmStream(factory, channelInputVectors[i], chAlgorithms[i], chPools[i]);
+    connectAlgorithmStream(channelInputVectors[i], chAlgorithms[i], &chPools[i]);
   }
 
   factory.shutdown();

@@ -135,8 +135,7 @@ public:
                        vector<Real> audioBuffer,
                        int channel = -1);
 
-  void connectAlgorithmStream(essentia::streaming::AlgorithmFactory& factory,
-                              VectorInput<Real>* inputVec,
+  void connectAlgorithmStream(VectorInput<Real>* inputVec,
                               map<string, Algorithm*> algorithms,
                               Pool pool);
 
