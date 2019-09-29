@@ -58,6 +58,8 @@ using namespace scheduler;
 
 class MLTK {
 public:
+  MLTK() noexcept;
+  
   // This boolean is used to toggle the recording of data to an output
   // file in the YAML format. YAML is a data format similar to JSON
   bool recording = false;
@@ -87,7 +89,7 @@ public:
   map<int, scheduler::Network *> chNetworks;
 
   // Pool objects for collecting, aggregating, and holding statistics.
-  Pool pool, poolAggr, poolStats;
+  Pool monoPool, monoPoolAggr, monoPoolStats;
   map<int, Pool> chPools;
   map<int, Pool> chPoolAggrs;
   map<int, Pool> chPoolStats;
@@ -120,7 +122,7 @@ public:
   int binsPerOctave = 12;
   
   template <class mType>
-  bool exists(string algorithm);
+  bool exists(string algorithm, int channel = -1);
   
   // -1 = mono aggregate channel
   Real getValue(string algorithm, int channel = -1);
@@ -135,7 +137,8 @@ public:
 
   void connectAlgorithmStream(essentia::streaming::AlgorithmFactory& factory,
                               VectorInput<Real>* inputVec,
-                              map<string, Algorithm*> algorithms);
+                              map<string, Algorithm*> algorithms,
+                              Pool pool);
 
   void update();
   void run();

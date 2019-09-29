@@ -25,6 +25,20 @@
 #include "ofMain.h"
 #include "ofxMLTK.h"
 
+//class MLTK {
+//public:
+MLTK::MLTK() noexcept {
+  for (int i = 0; i < numberOfInputChannels; i++) {
+    channelSoundBuffers[i] = ofSoundBuffer();
+    channelAudioBuffers[i] = vector<Real>();
+    chPools[i] = Pool();
+    chPoolAggrs[i] = Pool();
+    chPoolStats[i] = Pool();
+    chAlgorithms[i] = map<string, Algorithm*>();
+  }
+}
+//}
+
 void MLTK::setupAlgorithms(essentia::streaming::AlgorithmFactory& f,
                            vector<Real> audioBuffer,
                            int channel) {
@@ -688,7 +702,8 @@ void MLTK::setupAlgorithms(essentia::streaming::AlgorithmFactory& f,
 
 void MLTK::connectAlgorithmStream(essentia::streaming::AlgorithmFactory& factory,
                                   VectorInput<Real>* inputVec,
-                                  map<string, Algorithm*> algorithms) {
+                                  map<string, Algorithm*> algorithms,
+                                  Pool pool) {
   std::cout << "-------- connecting algorithm stream --------" << std::endl;
 
   // We start with the incoming signal that was attached to inputVec
@@ -735,19 +750,14 @@ void MLTK::setup(int frameSize=1024, int sampleRate=44100, int hopSize=512){
   factory.init();
 
   setupAlgorithms(factory, monoAudioBuffer);
-  connectAlgorithmStream(factory, monoInputVec, monoAlgorithms);
+  connectAlgorithmStream(factory, monoInputVec, monoAlgorithms, monoPool);
 
   for (int i = 0; i < numberOfInputChannels; i++) {
-    chPools[i] = Pool();
-    chPoolAggrs[i] = Pool();
-    chPoolStats[i] = Pool();
-
     // setting the vector happens in setupAlgorithms() now
     // channelInputVectors[i] = new VectorInput<Real>(&channelBuffers[i]);
     // channelInputVectors[i]->setVector(&channelBuffers[i]);
-    chAlgorithms[i] = map<string, Algorithm*>();
     setupAlgorithms(factory, channelAudioBuffers[i], i);
-    connectAlgorithmStream(factory, channelInputVectors[i], chAlgorithms[i]);
+    connectAlgorithmStream(factory, channelInputVectors[i], chAlgorithms[i], chPools[i]);
   }
 
   factory.shutdown();
@@ -765,7 +775,7 @@ void MLTK::run(){
   update();
 
   if (!accumulating) {
-    pool.clear();
+    monoPool.clear();
     for (int i = 0; i < numberOfInputChannels; i++) {
       chPools[i].clear();
     }
@@ -780,8 +790,8 @@ void MLTK::run(){
   }
 
   if (recording) {
-    aggr->input("input").set(pool);
-    aggr->output("output").set(poolAggr);
+    aggr->input("input").set(monoPool);
+    aggr->output("output").set(monoPoolAggr);
     aggr->compute();
 
     for (auto & a : chAggr) {
@@ -793,20 +803,24 @@ void MLTK::run(){
 }
 
 template <class mType>
-bool MLTK::exists(string algorithm){
+bool MLTK::exists(string algorithm, int channel){
+  Pool pool = channel < 0 ? monoPool : chPools[channel];
   return pool.contains<mType>(algorithm);
 };
 
 vector<Real> MLTK::getData(string algorithm, int channel){
-    return (channel < 0 ? pool : chPools[channel]).value<vector<vector<Real>>>(algorithm)[0];
+  Pool pool = channel < 0 ? monoPool : chPools[channel];
+  return pool.value<vector<vector<Real>>>(algorithm)[0];
 };
 
 vector<vector<Real>> MLTK::getRaw(string algorithm, int channel){
-  return (channel < 0 ? pool : chPools[channel]).value<vector<vector<Real>>>(algorithm);
+  Pool pool = channel < 0 ? monoPool : chPools[channel];
+  return pool.value<vector<vector<Real>>>(algorithm);
 };
 
 Real MLTK::getValue(string algorithm, int channel){
-  Real val = (channel < 0 ? pool : chPools[channel]).value<vector<Real>>(algorithm)[0];
+  Pool pool = channel < 0 ? monoPool : chPools[channel];
+  Real val = pool.value<vector<Real>>(algorithm)[0];
   return val;
 };
 
@@ -814,7 +828,7 @@ void MLTK::update(){
   for (int i = 0; i < frameSize; i++){
     float accum = 0.0;
     
-    for (int j = 0; i < numberOfInputChannels; j++) {
+    for (int j = 0; j < numberOfInputChannels; j++) {
       // copy values from ofApp to MLTK
       channelAudioBuffers[j][i] = (Real) channelSoundBuffers[j][i];
       accum += channelAudioBuffers[j][i];
@@ -825,7 +839,7 @@ void MLTK::update(){
 }
 
 void MLTK::save(){
-  output->input("pool").set(poolAggr);
+  output->input("pool").set(monoPoolAggr);
   output->compute();
 }
 
@@ -833,8 +847,8 @@ void MLTK::exit(){
   if(monoNetwork != NULL){
     monoNetwork->clear();
   }
-  pool.clear();
-  poolAggr.clear();
+  monoPool.clear();
+  monoPoolAggr.clear();
   
   for (auto & p : chPools) {
     p.second.clear();
