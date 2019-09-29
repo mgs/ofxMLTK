@@ -736,11 +736,13 @@ void MLTK::connectAlgorithmStream(VectorInput<Real>* inputVec,
 
 void MLTK::setup(int frameSize=1024, int sampleRate=44100, int hopSize=512){
   this->frameSize = frameSize;
-  this->sampleRate = frameSize;
-  this->hopSize = frameSize;
+  this->sampleRate = sampleRate;
+  this->hopSize = hopSize;
 
   monoAudioBuffer.resize(frameSize, 0.0);
   for (int i = 0; i < numberOfInputChannels; i++) {
+    // HACKHACK: questionable... because ofApp::audioIn should size it
+    // channelSoundBuffers[i].resize(frameSize);
     channelAudioBuffers[i].resize(frameSize, 0.0);
   }
 
@@ -749,14 +751,14 @@ void MLTK::setup(int frameSize=1024, int sampleRate=44100, int hopSize=512){
   factory.init();
 
   setupAlgorithms(factory, monoAudioBuffer);
-  connectAlgorithmStream(monoInputVec, monoAlgorithms, &monoPool);
+  connectAlgorithmStream(monoInputVec, monoAlgorithms, monoPool);
 
   for (int i = 0; i < numberOfInputChannels; i++) {
     // setting the vector happens in setupAlgorithms() now
     // channelInputVectors[i] = new VectorInput<Real>(&channelBuffers[i]);
     // channelInputVectors[i]->setVector(&channelBuffers[i]);
     setupAlgorithms(factory, channelAudioBuffers[i], i);
-    connectAlgorithmStream(channelInputVectors[i], chAlgorithms[i], &chPools[i]);
+    connectAlgorithmStream(channelInputVectors[i], chAlgorithms[i], chPools[i]);
   }
 
   factory.shutdown();
@@ -793,10 +795,10 @@ void MLTK::run(){
     aggr->output("output").set(monoPoolAggr);
     aggr->compute();
 
-    for (auto & a : chAggr) {
-      a.second->input("input").set(chPools[a.first]);
-      a.second->input("output").set(chPoolAggrs[a.first]);
-      a.second->compute();
+    for (int i = 0; i < numberOfInputChannels; i++) {
+      chAggr[i]->input("input").set(chPools[i]);
+      chAggr[i]->input("output").set(chPoolAggrs[i]);
+      chAggr[i]->compute();
     }
   }
 }

@@ -103,7 +103,7 @@ public:
   
   int numberOfOutputChannels = 0;
   // This should match the number of input channels in your input
-  int numberOfInputChannels = 4;
+  int numberOfInputChannels = 2;
   // the sampleRate should match the rate of of your sound card, you can check
   // this "Audio MIDI Setup.app" found in the Utilities folder of Applications
   int sampleRate = 44100;
