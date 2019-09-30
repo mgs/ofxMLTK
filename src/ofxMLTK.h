@@ -65,6 +65,8 @@ public:
   // file in the YAML format. YAML is a data format similar to JSON
   bool recording = false;
   
+  
+  
   // This boolean controls whether the pool should accumulate values or
   // be cleared on each frame
   bool accumulating = false;
@@ -78,6 +80,9 @@ public:
   
   // These soundbuffers contain the data coming in from openFrameworks
   ofSoundBuffer leftAudioBuffer, rightAudioBuffer;
+  
+  // Vector holding the individuals channels
+  vector<ofSoundBuffer> channels;
   
   // Not currently being used
   // std::map<std::string, VectorInput<Real>> inputMap;
@@ -132,7 +137,9 @@ public:
   void setupAlgorithms(essentia::streaming::AlgorithmFactory& factory);
   
   void connectAlgorithmStream(essentia::streaming::AlgorithmFactory& factory);
-//  void create(map<string, Algorithm*> m, string algo);
+  
+  template <typename... Params>
+  void create(map<string, Algorithm*> &m, essentia::streaming::AlgorithmFactory& f, string algo, Params... params);
     
   void update();
   void run();
