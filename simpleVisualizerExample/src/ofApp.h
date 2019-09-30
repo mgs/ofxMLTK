@@ -9,6 +9,9 @@ class ofApp: public ofBaseApp{
   ofSoundStreamSettings soundStreamSettings;
   
   MLTK mltk;
+
+  Real rms;
+  vector<Real> spectrum;
   
   void setup();
   void update();

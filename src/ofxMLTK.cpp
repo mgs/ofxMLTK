@@ -25,8 +25,6 @@
 #include "ofMain.h"
 #include "ofxMLTK.h"
 
-//class MLTK {
-//public:
 MLTK::MLTK() noexcept {
   for (int i = 0; i < numberOfInputChannels; i++) {
     channelSoundBuffers[i] = ofSoundBuffer();
@@ -36,7 +34,11 @@ MLTK::MLTK() noexcept {
     chPoolStats[i] = Pool();
   }
 }
-//}
+
+template <typename... Params>
+void MLTK::create(map<string, Algorithm*> &m, essentia::streaming::AlgorithmFactory& f, string algo, Params... params){
+  m[algo] =  f.create(algo);
+};
 
 void MLTK::setupAlgorithms(essentia::streaming::AlgorithmFactory& f,
                            vector<Real> audioBuffer,
@@ -159,7 +161,7 @@ void MLTK::setupAlgorithms(essentia::streaming::AlgorithmFactory& f,
 //    { "MetadataReader", f.create("MetadataReader") },
     { "MonoLoader", f.create("MonoLoader") },
 //    { "MonoWriter", f.create("MonoWriter") },
-    
+
     // Standard Algorithms
 //    { "AutoCorrelation", f.create("AutoCorrelation") },
 //    { "BPF", f.create("BPF") },
@@ -173,8 +175,7 @@ void MLTK::setupAlgorithms(essentia::streaming::AlgorithmFactory& f,
 //    { "Derivative", f.create("Derivative") },
     { "FFT", f.create("FFT") },
     { "FFTC", f.create("FFTC") },
-        
-        
+
     //    FrameCutter
     //    streaming mode | Standard category
     //
@@ -201,6 +202,11 @@ void MLTK::setupAlgorithms(essentia::streaming::AlgorithmFactory& f,
     { "FrameCutter", f.create("FrameCutter",
                                     "frameSize", frameSize,
                                     "hopSize", hopSize) },
+
+    { "LargeFrameCutter", f.create("FrameCutter",
+                                    "frameSize", frameSize*32,
+                                    "hopSize", hopSize*32) },
+
 //                                    "startFromZero", true,
 //                                    "validFrameThresholdRatio", 0,
 //                                    "lastFrameToEndOfFile", true) },
@@ -236,7 +242,11 @@ void MLTK::setupAlgorithms(essentia::streaming::AlgorithmFactory& f,
 //    { "Welch", f.create("Welch") },
     { "Windowing", f.create("Windowing",
                             "type", "hann") },
-//    { "ZeroCrossingRate", f.create("ZeroCrossingRate") },
+
+    { "LargeWindowing", f.create("Windowing",
+                                 "type", "hann") },
+
+    { "ZeroCrossingRate", f.create("ZeroCrossingRate") },
 
     // Spectral
 //    { "BFCC", f.create("BFCC") },
@@ -535,16 +545,25 @@ void MLTK::connectAlgorithmStream(VectorInput<Real>* inputVec,
   // We start with the incoming signal that was attached to inputVec
   *inputVec >> algorithms["DCRemoval"]->input("signal");
 
+//  *inputVec >> algorithms["CubicSpline"]->input("x");
+
+//  algorithms["CubicSpline"]->output("y") >> PC(pool, "CubicSpline.y");
+//  algorithms["CubicSpline"]->output("dy") >> PC(pool, "CubicSpline.dy");;
+//  algorithms["CubicSpline"]->output("ddy") >> PC(pool, "CubicSpline.ddy");;
+  
   // Remember that all the strings match 1:1 with Essentia's reference documentation.
   // Algorithms can have an unlimited number of OUTPUTS but every input must
   // always have exactly 1 connection.
   // (tl;dr; inputs always need to be connected)
   algorithms["DCRemoval"]->output("signal") >> algorithms["FrameCutter"]->input("signal");
+  algorithms["DCRemoval"]->output("signal") >> algorithms["LargeFrameCutter"]->input("signal");
   algorithms["FrameCutter"]->output("frame") >> algorithms["Windowing"]->input("frame");
+  algorithms["LargeFrameCutter"]->output("frame") >> algorithms["LargeWindowing"]->input("frame");
   algorithms["Windowing"]->output("frame") >> algorithms["RMS"]->input("array");
   algorithms["Windowing"]->output("frame") >> algorithms["Spectrum"]->input("frame");
-  // TODO: connect to a sink
-  // algorithms["Windowing"]->output("frame") >> algorithms["Chromagram"]->input("frame");
+  algorithms["LargeWindowing"]->output("frame") >> algorithms["Chromagram"]->input("frame");
+  algorithms["Chromagram"]->output("chromagram") >> PC(pool, "chromagram");
+//  algorithms["Windowing"]->output("frame") >> algorithms["Chromagram"]->input("frame");
   algorithms["Spectrum"]->output("spectrum")  >> algorithms["MFCC"]->input("spectrum");
   algorithms["Spectrum"]->output("spectrum") >> algorithms["SpectralPeaks"]->input("spectrum");
   algorithms["SpectralPeaks"]->output("frequencies") >> algorithms["HPCP"]->input("frequencies");

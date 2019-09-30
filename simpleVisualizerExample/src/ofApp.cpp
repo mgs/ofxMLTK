@@ -24,33 +24,26 @@ void ofApp::setup(){
 
 //--------------------------------------------------------------
 void ofApp::update(){
+  rms = mltk.getValue("RMS");
+  spectrum = mltk.getData("Spectrum");
+  
    mltk.run();
 }
 
 //--------------------------------------------------------------
 void ofApp::draw(){
-  const Real &rms = mltk.getValue("RMS");
-  const vector<Real> &spec = mltk.getData("Spectrum");
-  
   ofFill();
   ofSetColor(0,0,0);
   
-  for(int i = 0; i < spec.size(); i++){
-    ofDrawRectangle(i*(ofGetWidth()/spec.size()), ofGetHeight()/2, ofGetWidth()/spec.size(), abs(spec[i])*ofGetHeight());
+  for(int i = 0; i < spectrum.size(); i++){
+    ofDrawRectangle(i*(ofGetWidth()/spectrum.size()), ofGetHeight()/2, ofGetWidth()/spectrum.size(), abs(spectrum[i])*ofGetHeight());
   }
   
 }
 
 void ofApp::audioIn(ofSoundBuffer &inBuffer){
-  int bufCounter = 0;
-  
-  for (int i = 0; i < inBuffer.getBuffer().size(); i += 2){
-    mltk.leftAudioBuffer[bufCounter] = (Real) (inBuffer.getBuffer()[i]);
-    mltk.rightAudioBuffer[bufCounter] = (Real) (inBuffer.getBuffer()[i+1]);
-    
-    mltk.audioBuffer[bufCounter] = (Real) ((inBuffer.getBuffer()[i]) + (inBuffer.getBuffer()[i+1])) / 2;
-    bufCounter++;
-  }
+  inBuffer.getChannel(mltk.leftAudioBuffer, 0);
+  inBuffer.getChannel(mltk.rightAudioBuffer, 1);
 }
 
 

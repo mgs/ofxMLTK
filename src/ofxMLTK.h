@@ -70,6 +70,8 @@ public:
 
   // These soundbuffers contain the data coming in from openFrameworks
   map<int, ofSoundBuffer> channelSoundBuffers;
+  // Vector holding the individuals channels
+//  vector<ofSoundBuffer> channels;
 
   VectorInput<Real> *monoInputVec = NULL;
   map<int, VectorInput<Real>*> channelInputVectors;
@@ -130,7 +132,10 @@ public:
   vector<vector<Real>> getRaw(string algorithm, int channel = -1);
   
   void setup(int frameSize, int sampleRate, int hopSize);
-  
+
+  template <typename... Params>
+  void create(map<string, Algorithm*> &m, essentia::streaming::AlgorithmFactory& f, string algo, Params... params);
+
   void setupAlgorithms(essentia::streaming::AlgorithmFactory& factory,
                        vector<Real> audioBuffer,
                        int channel = -1);
