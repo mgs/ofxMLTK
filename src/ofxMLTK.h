@@ -71,7 +71,7 @@ public:
   // These soundbuffers contain the data coming in from openFrameworks
   map<int, ofSoundBuffer> channelSoundBuffers;
 
-  VectorInput<Real> *monoInputVec;
+  VectorInput<Real> *monoInputVec = NULL;
   map<int, VectorInput<Real>*> channelInputVectors;
 
   VectorInput<Real> *inputX;
@@ -100,7 +100,7 @@ public:
   map<int, map<string, essentia::streaming::Algorithm*>> chAlgorithms;
 
   string fileName;
-  
+
   int numberOfOutputChannels = 0;
   // This should match the number of input channels in your input
   int numberOfInputChannels = 2;

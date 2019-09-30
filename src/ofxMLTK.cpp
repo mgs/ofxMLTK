@@ -34,7 +34,6 @@ MLTK::MLTK() noexcept {
     chPools[i] = Pool();
     chPoolAggrs[i] = Pool();
     chPoolStats[i] = Pool();
-    chAlgorithms[i] = map<string, Algorithm*>();
   }
 }
 //}
@@ -44,10 +43,17 @@ void MLTK::setupAlgorithms(essentia::streaming::AlgorithmFactory& f,
                            int channel) {
 
   // Using Essentia's VectorInput type and pointing it at the audioBuffer reference
-  VectorInput<Real>* newInputVec = new VectorInput<Real>(&audioBuffer);
-  //  inputX = new VectorInput<Real>(&smoothingBuffer);
-  newInputVec->setVector(&audioBuffer);
-  //  inputX->setVector(&smoothingBuffer);
+//  const VectorInput<Real>* newInputVec = new VectorInput<Real>(&audioBuffer);
+//  inputX = new VectorInput<Real>(&smoothingBuffer);
+//  newInputVec->setVector(&audioBuffer);
+//  inputX->setVector(&smoothingBuffer);
+  if (channel < 0) {
+    monoInputVec = new VectorInput<Real>(&audioBuffer);
+    monoInputVec->setVector(&audioBuffer);
+  } else {
+    channelInputVectors[channel] = new VectorInput<Real>(&audioBuffer);
+    channelInputVectors[channel]->setVector(&audioBuffer);
+  }
 
   map<string, essentia::streaming::Algorithm*> algorithms = {
     // Envelope/SFX category
@@ -57,8 +63,8 @@ void MLTK::setupAlgorithms(essentia::streaming::AlgorithmFactory& f,
     // output: afterMaxToBeforeMaxEnergyRatio (real) - the ratio between the pitch energy after the pitch maximum to the pitch energy before the pitch maximum
     // description: This algorithm computes the ratio between the pitch energy after the pitch maximum and the pitch energy before the pitch maximum. Sounds having an monotonically ascending pitch or one unique pitch will show a value of (0,1], while sounds having a monotonically descending pitch will show a value of [1,∞). In case there is no energy before the max pitch, the algorithm will return the energy after the maximum pitch.
     //
-    //The algorithm throws exception when input is either empty or contains only zeros.
-    { "AfterMaxToBeforeMaxEnergyRatio", f.create("AfterMaxToBeforeMaxEnergyRatio") },
+    // The algorithm throws exception when input is either empty or contains only zeros.
+//    { "AfterMaxToBeforeMaxEnergyRatio", f.create("AfterMaxToBeforeMaxEnergyRatio") },
     
     // DerivativeSFX
     // inputs: envelope (vector_real) - the envelope of the signal
@@ -73,7 +79,7 @@ void MLTK::setupAlgorithms(essentia::streaming::AlgorithmFactory& f,
     // This algorithm is meant to be fed by the outputs of the Envelope algorithm. If used in streaming mode, RealAccumulator should be connected in between. An exception is thrown if the input signal is empty.
     //
     // See also: Envelope (streaming) RealAccumulator (streaming)
-    { "DerivativeSFX", f.create("DerivativeSFX") },
+//    { "DerivativeSFX", f.create("DerivativeSFX") },
     
     // Envelope
     // input: signal (real) - the input signal
@@ -87,7 +93,7 @@ void MLTK::setupAlgorithms(essentia::streaming::AlgorithmFactory& f,
     // This algorithm computes the envelope of a signal by applying a non-symmetric lowpass filter on a signal. By default it rectifies the signal, but that is optional.
     // References:
     // [1] U. Zölzer, Digital Audio Signal Processing, John Wiley & Sons Ltd, 1997, ch.7
-    { "Envelope", f.create("Envelope") },
+//    { "Envelope", f.create("Envelope") },
     
     // FlatnessSFX
     // input: envelope (vector_real) - the envelope of the signal
@@ -99,7 +105,7 @@ void MLTK::setupAlgorithms(essentia::streaming::AlgorithmFactory& f,
     // An exception is thrown if the input envelope is empty.
     //
     // See Also: Envelope (streaming) RealAccumulator (streaming)
-    { "FlatnessSFX", f.create("FlatnessSFX") },
+//    { "FlatnessSFX", f.create("FlatnessSFX") },
     
     // LogAttackTime
     //
@@ -122,90 +128,50 @@ void MLTK::setupAlgorithms(essentia::streaming::AlgorithmFactory& f,
     //
     // Note that startAttackThreshold cannot be greater than stopAttackThreshold and the input signal should not be empty. In any of these cases an exception will be thrown.
     // See Also: Envelope (streaming) RealAccumulator (streaming)
-    { "LogAttackTime", f.create("LogAttackTime") },
+//    { "LogAttackTime", f.create("LogAttackTime") },
     
-    
-    { "MaxToTotal", f.create("MaxToTotal") },
-    
-    { "MinToTotal", f.create("MinToTotal") },
-    
-    { "StrongDecay", f.create("StrongDecay") },
-    
-    { "TCToTotal", f.create("TCToTotal") },
-    
+//    { "MaxToTotal", f.create("MaxToTotal") },
+//    { "MinToTotal", f.create("MinToTotal") },
+//    { "StrongDecay", f.create("StrongDecay") },
+//    { "TCToTotal", f.create("TCToTotal") },
+
     // Filters
-    
-    { "AllPass", f.create("AllPass") },
-    
-    { "BandPass", f.create("BandPass") },
-    
-    { "BandReject", f.create("BandReject") },
-    
+//    { "AllPass", f.create("AllPass") },
+//    { "BandPass", f.create("BandPass") },
+//    { "BandReject", f.create("BandReject") },
     { "DCRemoval", f.create("DCRemoval",
-                                  "sampleRate", sampleRate) },
-    
-    { "EqualLoudness", f.create("EqualLoudness") },
-    
-    { "HighPass", f.create("HighPass") },
-    
-    { "IIR", f.create("IIR") },
-    
-    { "LowPass", f.create("LowPass") },
-    
-    { "MaxFilter", f.create("MaxFilter") },
-    
-    { "MedianFilter", f.create("MedianFilter") },
-    
-    { "MovingAverage", f.create("MovingAverage") },
-    
+                            "sampleRate", sampleRate) },
+//    { "EqualLoudness", f.create("EqualLoudness") },
+//    { "HighPass", f.create("HighPass") },
+//    { "IIR", f.create("IIR") },
+//    { "LowPass", f.create("LowPass") },
+//    { "MaxFilter", f.create("MaxFilter") },
+//    { "MedianFilter", f.create("MedianFilter") },
+//    { "MovingAverage", f.create("MovingAverage") },
+
     // Input/output
-    
     { "AudioLoader", f.create("AudioLoader") },
-    
-    { "AudioOnsetsMarker", f.create("AudioOnsetsMarker") },
-    
-    { "AudioWriter", f.create("AudioWriter") },
-    
-    { "EasyLoader", f.create("EasyLoader") },
-
-    { "EqloudLoader", f.create("EqloudLoader") },
-    
-    { "FileOutput", f.create("FileOutput") },
-    
-    { "MetadataReader", f.create("MetadataReader") },
-    
+//    { "AudioOnsetsMarker", f.create("AudioOnsetsMarker") },
+//    { "AudioWriter", f.create("AudioWriter") },
+//    { "EasyLoader", f.create("EasyLoader") },
+//    { "EqloudLoader", f.create("EqloudLoader") },
+//    { "FileOutput", f.create("FileOutput") },
+//    { "MetadataReader", f.create("MetadataReader") },
     { "MonoLoader", f.create("MonoLoader") },
-    
-    { "MonoWriter", f.create("MonoWriter") },
-
-    //    Deprecated? Use data structure VectorInput instead-
-    //    { "VectorInput", f.create("VectorInput") },
-    //    { "YamlInput", f.create("YamlInput") },
-    //    { "YamlOutput", f.create("YamlOutput") },
+//    { "MonoWriter", f.create("MonoWriter") },
     
     // Standard Algorithms
-    { "AutoCorrelation", f.create("AutoCorrelation") },
-    
-    { "BPF", f.create("BPF") },
-    
-    { "BinaryOperator", f.create("BinaryOperator") },
-    
-    { "BinaryOperatorStream", f.create("BinaryOperatorStream") },
-    
-    { "Clipper", f.create("Clipper") },
-    
+//    { "AutoCorrelation", f.create("AutoCorrelation") },
+//    { "BPF", f.create("BPF") },
+//    { "BinaryOperator", f.create("BinaryOperator") },
+//    { "BinaryOperatorStream", f.create("BinaryOperatorStream") },
+//    { "Clipper", f.create("Clipper") },
     { "ConstantQ", f.create("ConstantQ") },
-    
-    { "CrossCorrelation", f.create("CrossCorrelation") },
-    
-    { "CubicSpline", f.create("CubicSpline") },
-    
-    { "DCT", f.create("DCT") },
-    
-    { "Derivative", f.create("Derivative") },
-    
+//    { "CrossCorrelation", f.create("CrossCorrelation") },
+//    { "CubicSpline", f.create("CubicSpline") },
+//    { "DCT", f.create("DCT") },
+//    { "Derivative", f.create("Derivative") },
     { "FFT", f.create("FFT") },
-    
     { "FFTC", f.create("FFTC") },
         
         
@@ -241,272 +207,151 @@ void MLTK::setupAlgorithms(essentia::streaming::AlgorithmFactory& f,
 //
     //    Python Only
     //    { "FrameGenerator", f.create("FrameGenerator") },
-    
-    { "FrameToReal", f.create("FrameToReal") },
-    
-    { "IDCT", f.create("IDCT") },
-    
-    { "IFFT", f.create("IFFT") },
-    
-    { "IFFTC", f.create("IFFTC") },
-    
-    { "MonoMixer", f.create("MonoMixer") },
-    
-    { "Multiplexer", f.create("Multiplexer") },
-    
-    { "NSGConstantQ", f.create("NSGConstantQ") },
-    
-    { "NSGConstantQStreaming", f.create("NSGConstantQStreaming") },
-    
-    { "NSGIConstantQ", f.create("NSGIConstantQ") },
-    
-    { "NoiseAdder", f.create("NoiseAdder") },
 
-    { "OverlapAdd", f.create("OverlapAdd") },
-    
-    { "PeakDetection", f.create("PeakDetection") },
-    
-    { "RealAccumulator", f.create("RealAccumulator") },
-    
-    { "Resample", f.create("Resample") },
-    
-    { "Scale", f.create("Scale") },
-    
-    { "Slicer", f.create("Slicer") },
-    
-    { "Spline", f.create("Spline") },
-    
-    { "StereoDemuxer", f.create("StereoDemuxer") },
-    
-    { "StereoMuxer", f.create("StereoMuxer") },
-    
-    { "StereoTrimmer", f.create("StereoTrimmer") },
-        
-    { "Trimmer", f.create("Trimmer") },
-    
-    { "UnaryOperator", f.create("UnaryOperator") },
-
-    { "UnaryOperatorStream", f.create("UnaryOperatorStream") },
-    
-    { "VectorRealAccumulator", f.create("VectorRealAccumulator") },
-    
-    { "WarpedAutoCorrelation", f.create("WarpedAutoCorrelation") },
-    
-    { "Welch", f.create("Welch") },
-    
+//    { "FrameToReal", f.create("FrameToReal") },
+//    { "IDCT", f.create("IDCT") },
+//    { "IFFT", f.create("IFFT") },
+//    { "IFFTC", f.create("IFFTC") },
+//    { "MonoMixer", f.create("MonoMixer") },
+//    { "Multiplexer", f.create("Multiplexer") },
+//    { "NSGConstantQ", f.create("NSGConstantQ") },
+//    { "NSGConstantQStreaming", f.create("NSGConstantQStreaming") },
+//    { "NSGIConstantQ", f.create("NSGIConstantQ") },
+//    { "NoiseAdder", f.create("NoiseAdder") },
+//    { "OverlapAdd", f.create("OverlapAdd") },
+//    { "PeakDetection", f.create("PeakDetection") },
+//    { "RealAccumulator", f.create("RealAccumulator") },
+//    { "Resample", f.create("Resample") },
+//    { "Scale", f.create("Scale") },
+//    { "Slicer", f.create("Slicer") },
+//    { "Spline", f.create("Spline") },
+//    { "StereoDemuxer", f.create("StereoDemuxer") },
+//    { "StereoMuxer", f.create("StereoMuxer") },
+//    { "StereoTrimmer", f.create("StereoTrimmer") },
+//    { "Trimmer", f.create("Trimmer") },
+//    { "UnaryOperator", f.create("UnaryOperator") },
+//    { "UnaryOperatorStream", f.create("UnaryOperatorStream") },
+//    { "VectorRealAccumulator", f.create("VectorRealAccumulator") },
+//    { "WarpedAutoCorrelation", f.create("WarpedAutoCorrelation") },
+//    { "Welch", f.create("Welch") },
     { "Windowing", f.create("Windowing",
-                                  "type", "hann") },
-    
-    { "ZeroCrossingRate", f.create("ZeroCrossingRate") },
+                            "type", "hann") },
+//    { "ZeroCrossingRate", f.create("ZeroCrossingRate") },
 
     // Spectral
-    
-    { "BFCC", f.create("BFCC") },
-    
-    { "BarkBands", f.create("BarkBands") },
-    
-    { "ERBBands", f.create("ERBBands") },
-    
-    { "EnergyBand", f.create("EnergyBand") },
-    
-    { "EnergyBandRatio", f.create("EnergyBandRatio") },
-    
-    { "FlatnessDB", f.create("FlatnessDB") },
-    
-    { "Flux", f.create("Flux") },
-    
-    { "FrequencyBands", f.create("FrequencyBands") },
-    
-    { "GFCC", f.create("GFCC") },
-    
-    { "HFC", f.create("HFC") },
-    
-    { "LPC", f.create("LPC") },
-    
+//    { "BFCC", f.create("BFCC") },
+//    { "BarkBands", f.create("BarkBands") },
+//    { "ERBBands", f.create("ERBBands") },
+//    { "EnergyBand", f.create("EnergyBand") },
+//    { "EnergyBandRatio", f.create("EnergyBandRatio") },
+//    { "FlatnessDB", f.create("FlatnessDB") },
+//    { "Flux", f.create("Flux") },
+//    { "FrequencyBands", f.create("FrequencyBands") },
+//    { "GFCC", f.create("GFCC") },
+//    { "HFC", f.create("HFC") },
+//    { "LPC", f.create("LPC") },
     { "MFCC", f.create("MFCC") },
-    
-    { "MaxMagFreq", f.create("MaxMagFreq") },
-    
-    { "MelBands", f.create("MelBands") },
-    
-    { "Panning", f.create("Panning") },
-    
-    { "PowerSpectrum", f.create("PowerSpectrum") },
-    
-    { "RollOff", f.create("RollOff") },
-    
-    { "SpectralCentroidTime", f.create("SpectralCentroidTime") },
-    
-    { "SpectralComplexity", f.create("SpectralComplexity") },
-    
-    { "SpectralContrast", f.create("SpectralContrast") },
-
+//    { "MaxMagFreq", f.create("MaxMagFreq") },
+//    { "MelBands", f.create("MelBands") },
+//    { "Panning", f.create("Panning") },
+//    { "PowerSpectrum", f.create("PowerSpectrum") },
+//    { "RollOff", f.create("RollOff") },
+//    { "SpectralCentroidTime", f.create("SpectralCentroidTime") },
+//    { "SpectralComplexity", f.create("SpectralComplexity") },
+//    { "SpectralContrast", f.create("SpectralContrast") },
     { "SpectralPeaks", f.create("SpectralPeaks") },
-
-    { "SpectralWhitening", f.create("SpectralWhitening") },
-
-    { "SpectrumToCent", f.create("SpectrumToCent") },
-
-    { "StrongPeak", f.create("StrongPeak") },
-
-    { "TriangularBands", f.create("TriangularBands") },
-
-    { "TriangularBarkBands", f.create("TriangularBarkBands") },
+//    { "SpectralWhitening", f.create("SpectralWhitening") },
+//    { "SpectrumToCent", f.create("SpectrumToCent") },
+//    { "StrongPeak", f.create("StrongPeak") },
+//    { "TriangularBands", f.create("TriangularBands") },
+//    { "TriangularBarkBands", f.create("TriangularBarkBands") },
     
     // Rhythm
 
-    { "BeatTrackerDegara", f.create("BeatTrackerDegara") },
-
-    { "BeatTrackerMultiFeature", f.create("BeatTrackerMultiFeature") },
-
-    { "Beatogram", f.create("Beatogram") },
-
-    { "BeatsLoudness", f.create("BeatsLoudness") },
-
-    { "BpmHistogram", f.create("BpmHistogram") },
-
-    { "BpmHistogramDescriptors", f.create("BpmHistogramDescriptors") },
-
-    { "Danceability", f.create("Danceability") },
-    
-    { "HarmonicBpm", f.create("HarmonicBpm") },
-    
-    { "LoopBpmConfidence", f.create("LoopBpmConfidence") },
-    
-    { "LoopBpmEstimator", f.create("LoopBpmEstimator") },
-    
-    { "Meter", f.create("Meter") },
-    
-    { "NoveltyCurve", f.create("NoveltyCurve") },
-    
+//    { "BeatTrackerDegara", f.create("BeatTrackerDegara") },
+//    { "BeatTrackerMultiFeature", f.create("BeatTrackerMultiFeature") },
+//    { "Beatogram", f.create("Beatogram") },
+//    { "BeatsLoudness", f.create("BeatsLoudness") },
+//    { "BpmHistogram", f.create("BpmHistogram") },
+//    { "BpmHistogramDescriptors", f.create("BpmHistogramDescriptors") },
+//    { "Danceability", f.create("Danceability") },
+//    { "HarmonicBpm", f.create("HarmonicBpm") },
+//    { "LoopBpmConfidence", f.create("LoopBpmConfidence") },
+//    { "LoopBpmEstimator", f.create("LoopBpmEstimator") },
+//    { "Meter", f.create("Meter") },
+//    { "NoveltyCurve", f.create("NoveltyCurve") },
 //    { "NoveltyCurveFixedBpmEstimator", f.create("NoveltyCurveFixedBpmEstimator") },
-    
-    { "OnsetDetection", f.create("OnsetDetection") },
-    
-    { "OnsetDetectionGlobal", f.create("OnsetDetectionGlobal") },
-    
-    { "OnsetRate", f.create("OnsetRate") },
-    
-    { "Onsets", f.create("Onsets") },
-    
-    { "PercivalBpmEstimator", f.create("PercivalBpmEstimator") },
-    
-    { "PercivalEnhanceHarmonics", f.create("PercivalEnhanceHarmonics") },
-    
-    { "PercivalEvaluatePulseTrains", f.create("PercivalEvaluatePulseTrains") },
-    
-    { "RhythmDescriptors", f.create("RhythmDescriptors") },
-    
-    { "RhythmExtractor2013", f.create("RhythmExtractor2013") },
-    
-    { "RhythmExtractor", f.create("RhythmExtractor") },
-    
-    { "RhythmTransform", f.create("RhythmTransform") },
-    
-    { "SuperFluxExtractor", f.create("SuperFluxExtractor") },
-    
-    { "SuperFluxNovelty", f.create("SuperFluxNovelty") },
-    
-    { "SuperFluxPeaks", f.create("SuperFluxPeaks") },
-    
-    { "TempoScaleBands", f.create("TempoScaleBands") },
-    
-    { "TempoTap", f.create("TempoTap") },
-    
-    { "TempoTapMaxAgreement", f.create("TempoTapMaxAgreement") },
-    
-    { "TempoTapTicks", f.create("TempoTapTicks") },
+//    { "OnsetDetection", f.create("OnsetDetection") },
+//    { "OnsetDetectionGlobal", f.create("OnsetDetectionGlobal") },
+//    { "OnsetRate", f.create("OnsetRate") },
+//    { "Onsets", f.create("Onsets") },
+//    { "PercivalBpmEstimator", f.create("PercivalBpmEstimator") },
+//    { "PercivalEnhanceHarmonics", f.create("PercivalEnhanceHarmonics") },
+//    { "PercivalEvaluatePulseTrains", f.create("PercivalEvaluatePulseTrains") },
+//    { "RhythmDescriptors", f.create("RhythmDescriptors") },
+//    { "RhythmExtractor2013", f.create("RhythmExtractor2013") },
+//    { "RhythmExtractor", f.create("RhythmExtractor") },
+//    { "RhythmTransform", f.create("RhythmTransform") },
+//    { "SuperFluxExtractor", f.create("SuperFluxExtractor") },
+//    { "SuperFluxNovelty", f.create("SuperFluxNovelty") },
+//    { "SuperFluxPeaks", f.create("SuperFluxPeaks") },
+//    { "TempoScaleBands", f.create("TempoScaleBands") },
+//    { "TempoTap", f.create("TempoTap") },
+//    { "TempoTapMaxAgreement", f.create("TempoTapMaxAgreement") },
+//    { "TempoTapTicks", f.create("TempoTapTicks") },
     
     // Math
-    { "CartesianToPolar", f.create("CartesianToPolar") },
-    
-    { "Magnitude", f.create("Magnitude") },
-
-    { "PolarToCartesian", f.create("PolarToCartesian") },
+//    { "CartesianToPolar", f.create("CartesianToPolar") },
+//    { "Magnitude", f.create("Magnitude") },
+//    { "PolarToCartesian", f.create("PolarToCartesian") },
     
     // Statistics
-    { "CentralMoments", f.create("CentralMoments") },
-    
-    { "Centroid", f.create("Centroid") },
-    
-    { "Crest", f.create("Crest") },
-    
-    { "Decrease", f.create("Decrease") },
-    
-    { "DistributionShape", f.create("DistributionShape") },
-    
-    { "Energy", f.create("Energy") },
-    
-    { "Entropy", f.create("Entropy") },
-    
-    { "Flatness", f.create("Flatness") },
-    
-    { "GeometricMean", f.create("GeometricMean") },
-    
-    { "Histogram", f.create("Histogram") },
-    
-    { "InstantPower", f.create("InstantPower") },
-    
-    { "Mean", f.create("Mean") },
-    
-    { "Median", f.create("Median") },
-    
+//    { "CentralMoments", f.create("CentralMoments") },
+//    { "Centroid", f.create("Centroid") },
+//    { "Crest", f.create("Crest") },
+//    { "Decrease", f.create("Decrease") },
+//    { "DistributionShape", f.create("DistributionShape") },
+//    { "Energy", f.create("Energy") },
+//    { "Entropy", f.create("Entropy") },
+//    { "Flatness", f.create("Flatness") },
+//    { "GeometricMean", f.create("GeometricMean") },
+//    { "Histogram", f.create("Histogram") },
+//    { "InstantPower", f.create("InstantPower") },
+//    { "Mean", f.create("Mean") },
+//    { "Median", f.create("Median") },
     { "PoolAggregator", f.create("PoolAggregator") },
-    
-    { "PowerMean", f.create("PowerMean") },
-    
-    { "RawMoments", f.create("RawMoments") },
-    
-    { "SingleGaussian", f.create("SingleGaussian") },
-    
-    { "Variance", f.create("Variance") },
-    
-    { "Viterbi", f.create("Viterbi") },
-    
+//    { "PowerMean", f.create("PowerMean") },
+//    { "RawMoments", f.create("RawMoments") },
+//    { "SingleGaussian", f.create("SingleGaussian") },
+//    { "Variance", f.create("Variance") },
+//    { "Viterbi", f.create("Viterbi") },
+
     // Tonal
     
-    { "ChordsDescriptors", f.create("ChordsDescriptors") },
-    
-    { "ChordsDetection", f.create("ChordsDetection") },
-    
+//    { "ChordsDescriptors", f.create("ChordsDescriptors") },
+//    { "ChordsDetection", f.create("ChordsDetection") },
 //    { "ChordsDetectionBeats", f.create("ChordsDetectionBeats") },
-    
     { "Chromagram", f.create("Chromagram",
                              "binsPerOctave", 12) },
-    
-    { "Dissonance", f.create("Dissonance") },
-    
-    { "HighResolutionFeatures", f.create("HighResolutionFeatures") },
-    
-    { "Inharmonicity", f.create("Inharmonicity") },
-    
-    { "Key", f.create("Key") },
-    
-    { "KeyExtractor", f.create("KeyExtractor") },
-
-    { "NNLSChroma", f.create("NNLSChroma") },
-    
-    { "OddToEvenHarmonicEnergyRatio", f.create("OddToEvenHarmonicEnergyRatio") },
-
-    { "PitchSalience", f.create("PitchSalience") },
-    
-    { "SpectrumCQ", f.create("SpectrumCQ") },
-
-    { "TonalExtractor", f.create("TonalExtractor") },
-    
+//    { "Dissonance", f.create("Dissonance") },
+//    { "HighResolutionFeatures", f.create("HighResolutionFeatures") },
+//    { "Inharmonicity", f.create("Inharmonicity") },
+//    { "Key", f.create("Key") },
+//    { "KeyExtractor", f.create("KeyExtractor") },
+//    { "NNLSChroma", f.create("NNLSChroma") },
+//    { "OddToEvenHarmonicEnergyRatio", f.create("OddToEvenHarmonicEnergyRatio") },
+//    { "PitchSalience", f.create("PitchSalience") },
+//    { "SpectrumCQ", f.create("SpectrumCQ") },
+//    { "TonalExtractor", f.create("TonalExtractor") },
 //    { "TonicIndianArtMusic", f.create("TonicIndianArtMusic") },
-
-    { "Tristimulus", f.create("Tristimulus") },
-    
-    { "TuningFrequency", f.create("TuningFrequency") },
-
-    { "TuningFrequencyExtractor", f.create("TuningFrequencyExtractor") },
-    
-    { "Chromaprinter", f.create("Chromaprinter") },
+//    { "Tristimulus", f.create("Tristimulus") },
+//    { "TuningFrequency", f.create("TuningFrequency") },
+//    { "TuningFrequencyExtractor", f.create("TuningFrequencyExtractor") },
+//    { "Chromaprinter", f.create("Chromaprinter") },
 
     // Audio Problems
     
-    { "ClickDetector", f.create("ClickDetector") },
+//    { "ClickDetector", f.create("ClickDetector") },
 
     // Discontinuity Detector
     //    Inputs:
@@ -527,159 +372,141 @@ void MLTK::setupAlgorithms(essentia::streaming::AlgorithmFactory& f,
     //    subFrameSize (integer ∈ [1, ∞), default = 32) : size of the window used to compute silent subframes
     { "DiscontinuityDetector", f.create("DiscontinuityDetector") },
 
-    { "FalseStereoDetector", f.create("FalseStereoDetector") },
-    
-    { "GapsDetector", f.create("GapsDetector") },
-
-    { "HumDetector", f.create("HumDetector") },
-    
-    { "NoiseBurstDetector", f.create("NoiseBurstDetector") },
-
-    { "SNR", f.create("SNR") },
-    
-    { "SaturationDetector", f.create("SaturationDetector") },
-
-    { "StartStopCut", f.create("StartStopCut") },
-    
-    { "TruePeakDetector", f.create("TruePeakDetector") },
-
-    { "Duration", f.create("Duration") },
-    
-    { "EffectiveDuration", f.create("EffectiveDuration") },
-
-    { "FadeDetection", f.create("FadeDetection") },
-    
-    { "SilenceRate", f.create("SilenceRate") },
-
-    { "StartStopSilence", f.create("StartStopSilence") },
+//    { "FalseStereoDetector", f.create("FalseStereoDetector") },
+//
+//    { "GapsDetector", f.create("GapsDetector") },
+//
+//    { "HumDetector", f.create("HumDetector") },
+//
+//    { "NoiseBurstDetector", f.create("NoiseBurstDetector") },
+//
+//    { "SNR", f.create("SNR") },
+//
+//    { "SaturationDetector", f.create("SaturationDetector") },
+//
+//    { "StartStopCut", f.create("StartStopCut") },
+//
+//    { "TruePeakDetector", f.create("TruePeakDetector") },
+//
+//    { "Duration", f.create("Duration") },
+//
+//    { "EffectiveDuration", f.create("EffectiveDuration") },
+//
+//    { "FadeDetection", f.create("FadeDetection") },
+//
+//    { "SilenceRate", f.create("SilenceRate") },
+//
+//    { "StartStopSilence", f.create("StartStopSilence") },
     
     // Loudness/dynamics
     
-    { "DynamicComplexity", f.create("DynamicComplexity") },
+//    { "DynamicComplexity", f.create("DynamicComplexity") },
     
 //    { "Intensity", f.create("Intensity") },
 
     // standard-mode only
     //    { "Larm", f.create("Larm") },
 
-    { "Leq", f.create("Leq") },
-    
-    { "LevelExtractor", f.create("LevelExtractor") },
-
-    { "Loudness", f.create("Loudness") },
-    
-    { "LoudnessEBUR128", f.create("LoudnessEBUR128") },
-
-    { "LoudnessEBUR128Filter", f.create("LoudnessEBUR128Filter") },
-    
-    { "LoudnessVickers", f.create("LoudnessVickers") },
-
-    { "ReplayGain", f.create("ReplayGain") },
+//    { "Leq", f.create("Leq") },
+//
+//    { "LevelExtractor", f.create("LevelExtractor") },
+//
+//    { "Loudness", f.create("Loudness") },
+//
+//    { "LoudnessEBUR128", f.create("LoudnessEBUR128") },
+//
+//    { "LoudnessEBUR128Filter", f.create("LoudnessEBUR128Filter") },
+//
+//    { "LoudnessVickers", f.create("LoudnessVickers") },
+//
+//    { "ReplayGain", f.create("ReplayGain") },
     
     // Extractors
-    { "BarkExtractor", f.create("BarkExtractor") },
+//    { "BarkExtractor", f.create("BarkExtractor") },
     
 //    { "Extractor", f.create("Extractor") },
     
 //    { "FreesoundExtractor", f.create("FreesoundExtractor") },
-
-    { "LowLevelSpectralEqloudExtractor", f.create("LowLevelSpectralEqloudExtractor") },
-    
-    { "LowLevelSpectralExtractor", f.create("LowLevelSpectralExtractor") },
+//
+//    { "LowLevelSpectralEqloudExtractor", f.create("LowLevelSpectralEqloudExtractor") },
+//
+//    { "LowLevelSpectralExtractor", f.create("LowLevelSpectralExtractor") },
     
     // Synthesis
-    { "HarmonicMask", f.create("HarmonicMask") },
-    
-    { "HarmonicModelAnal", f.create("HarmonicModelAnal") },
-
-    { "HprModelAnal", f.create("HprModelAnal") },
-    
-    { "HpsModelAnal", f.create("HpsModelAnal") },
-
-    { "ResampleFFT", f.create("ResampleFFT") },
-    
-    { "SineModelAnal", f.create("SineModelAnal") },
-    
-    { "SineModelSynth", f.create("SineModelSynth") },
-    
-    { "SineSubtraction", f.create("SineSubtraction") },
-
-    { "SprModelAnal", f.create("SprModelAnal") },
-    
-    { "SprModelSynth", f.create("SprModelSynth") },
-
-    { "SpsModelAnal", f.create("SpsModelAnal") },
-    
-    { "SpsModelSynth", f.create("SpsModelSynth") },
-
-    { "StochasticModelAnal", f.create("StochasticModelAnal") },
-    
-    { "StochasticModelSynth", f.create("StochasticModelSynth") },
+//    { "HarmonicMask", f.create("HarmonicMask") },
+//
+//    { "HarmonicModelAnal", f.create("HarmonicModelAnal") },
+//
+//    { "HprModelAnal", f.create("HprModelAnal") },
+//
+//    { "HpsModelAnal", f.create("HpsModelAnal") },
+//
+//    { "ResampleFFT", f.create("ResampleFFT") },
+//
+//    { "SineModelAnal", f.create("SineModelAnal") },
+//
+//    { "SineModelSynth", f.create("SineModelSynth") },
+//
+//    { "SineSubtraction", f.create("SineSubtraction") },
+//
+//    { "SprModelAnal", f.create("SprModelAnal") },
+//
+//    { "SprModelSynth", f.create("SprModelSynth") },
+//
+//    { "SpsModelAnal", f.create("SpsModelAnal") },
+//
+//    { "SpsModelSynth", f.create("SpsModelSynth") },
+//
+//    { "StochasticModelAnal", f.create("StochasticModelAnal") },
+//
+//    { "StochasticModelSynth", f.create("StochasticModelSynth") },
 
     // Pitch
-    { "MultiPitchMelodia", f.create("MultiPitchMelodia") },
-    
-    { "PitchContours", f.create("PitchContours") },
-    
-    { "PitchContoursMelody", f.create("PitchContoursMelody") },
-    
-    { "PitchContoursMonoMelody", f.create("PitchContoursMonoMelody") },
-    
-    { "PitchContoursMultiMelody", f.create("PitchContoursMultiMelody") },
-    
-    { "PitchFilter", f.create("PitchFilter") },
-    
-    { "PitchMelodia", f.create("PitchMelodia") },
-    
-    { "PitchSalienceFunction", f.create("PitchSalienceFunction") },
-    
-    { "PitchSalienceFunctionPeaks", f.create("PitchSalienceFunctionPeaks") },
-    
-    { "PitchYin", f.create("PitchYin") },
-    
-    { "PitchYinFFT", f.create("PitchYinFFT") },
-    
-    { "PitchYinProbabilistic", f.create("PitchYinProbabilistic") },
-    
-    { "PitchYinProbabilities", f.create("PitchYinProbabilities") },
-    
-    { "PitchYinProbabilitiesHMM", f.create("PitchYinProbabilitiesHMM") },
-    
-    { "PredominantPitchMelodia", f.create("PredominantPitchMelodia") },
-    
-    { "Vibrato", f.create("Vibrato") },
+//    { "MultiPitchMelodia", f.create("MultiPitchMelodia") },
+//
+//    { "PitchContours", f.create("PitchContours") },
+//
+//    { "PitchContoursMelody", f.create("PitchContoursMelody") },
+//
+//    { "PitchContoursMonoMelody", f.create("PitchContoursMonoMelody") },
+//
+//    { "PitchContoursMultiMelody", f.create("PitchContoursMultiMelody") },
+//
+//    { "PitchFilter", f.create("PitchFilter") },
+//
+//    { "PitchMelodia", f.create("PitchMelodia") },
+//
+//    { "PitchSalienceFunction", f.create("PitchSalienceFunction") },
+//
+//    { "PitchSalienceFunctionPeaks", f.create("PitchSalienceFunctionPeaks") },
+//
+//    { "PitchYin", f.create("PitchYin") },
+//
+//    { "PitchYinFFT", f.create("PitchYinFFT") },
+//
+//    { "PitchYinProbabilistic", f.create("PitchYinProbabilistic") },
+//
+//    { "PitchYinProbabilities", f.create("PitchYinProbabilities") },
+//
+//    { "PitchYinProbabilitiesHMM", f.create("PitchYinProbabilitiesHMM") },
+//
+//    { "PredominantPitchMelodia", f.create("PredominantPitchMelodia") },
+//
+//    { "Vibrato", f.create("Vibrato") },
     
 //    Standard Mode Only
 //    { "PCA", f.create("PCA") },
 
     // Segmentation
-    { "SBic", f.create("SBic") },
+//    { "SBic", f.create("SBic") },
     
-    { "SpectralComplexity", f.create("SpectralComplexity") },
+//    { "SpectralComplexity", f.create("SpectralComplexity") },
     
     { "Spectrum", f.create("Spectrum") },
-    
-    { "SpectralPeaks", f.create("SpectralPeaks")},
-    
+
     { "RMS",  f.create("RMS") },
     
     { "HPCP", f.create("HPCP") },
-    
-    { "PoolAggregator", f.create("PoolAggregator")},
-    
-    { "BeatsLoudness", f.create("BeatsLoudness") },
-    
-    { "Beatogram", f.create("Beatogram") },
-    
-    { "Energy",  f.create("Energy") },
-    
-    { "InstantPower",  f.create("InstantPower") },
-    
-    { "Centroid",  f.create("Centroid", "range", sampleRate/2) },
-    
-    { "MFCC", f.create("MFCC",
-                             "normalize", "unit_sum",
-                             "highFrequencyBound", 12000) },
   };
   
   // if a file is passed, load it into one of essentia's MonoLoader objects
@@ -689,12 +516,12 @@ void MLTK::setupAlgorithms(essentia::streaming::AlgorithmFactory& f,
                                         "filename", fileName,
                                         "sampleRate", sampleRate);
   }
-  
-  if (channel == -1) {
-    monoInputVec = newInputVec;
+
+  if (channel < 0) {
+//    monoInputVec = newInputVec;
     monoAlgorithms = algorithms;
   } else {
-    channelInputVectors[channel] = newInputVec;
+//    channelInputVectors[channel] = newInputVec;
     chAlgorithms[channel] = algorithms;
   }
 }
@@ -742,7 +569,7 @@ void MLTK::setup(int frameSize=1024, int sampleRate=44100, int hopSize=512){
   monoAudioBuffer.resize(frameSize, 0.0);
   for (int i = 0; i < numberOfInputChannels; i++) {
     // HACKHACK: questionable... because ofApp::audioIn should size it
-    // channelSoundBuffers[i].resize(frameSize);
+    channelSoundBuffers[i].getBuffer().resize(frameSize, 0.0);
     channelAudioBuffers[i].resize(frameSize, 0.0);
   }
 
@@ -757,8 +584,8 @@ void MLTK::setup(int frameSize=1024, int sampleRate=44100, int hopSize=512){
     // setting the vector happens in setupAlgorithms() now
     // channelInputVectors[i] = new VectorInput<Real>(&channelBuffers[i]);
     // channelInputVectors[i]->setVector(&channelBuffers[i]);
-    setupAlgorithms(factory, channelAudioBuffers[i], i);
-    connectAlgorithmStream(channelInputVectors[i], chAlgorithms[i], chPools[i]);
+//    setupAlgorithms(factory, channelAudioBuffers[i], i);
+//    connectAlgorithmStream(channelInputVectors[i], chAlgorithms[i], chPools[i]);
   }
 
   factory.shutdown();
@@ -766,10 +593,10 @@ void MLTK::setup(int frameSize=1024, int sampleRate=44100, int hopSize=512){
   monoNetwork = new scheduler::Network(monoInputVec);
   monoNetwork->run();
 
-  for (int i = 0; i < numberOfInputChannels; i++) {
-    chNetworks[i] = new scheduler::Network(channelInputVectors[i]);
-    chNetworks[i]->run();
-  }
+//  for (int i = 0; i < numberOfInputChannels; i++) {
+//    chNetworks[i] = new scheduler::Network(channelInputVectors[i]);
+//    chNetworks[i]->run();
+//  }
 }
 
 void MLTK::run(){
@@ -785,21 +612,21 @@ void MLTK::run(){
   monoNetwork->reset();
   monoNetwork->run();
 
-  for (int i = 0; i < numberOfInputChannels; i++) {
-    chNetworks[i]->reset();
-    chNetworks[i]->run();
-  }
+//  for (int i = 0; i < numberOfInputChannels; i++) {
+//    chNetworks[i]->reset();
+//    chNetworks[i]->run();
+//  }
 
   if (recording) {
     aggr->input("input").set(monoPool);
     aggr->output("output").set(monoPoolAggr);
     aggr->compute();
 
-    for (int i = 0; i < numberOfInputChannels; i++) {
-      chAggr[i]->input("input").set(chPools[i]);
-      chAggr[i]->input("output").set(chPoolAggrs[i]);
-      chAggr[i]->compute();
-    }
+//    for (int i = 0; i < numberOfInputChannels; i++) {
+//      chAggr[i]->input("input").set(chPools[i]);
+//      chAggr[i]->input("output").set(chPoolAggrs[i]);
+//      chAggr[i]->compute();
+//    }
   }
 }
 
@@ -831,8 +658,10 @@ void MLTK::update(){
     
     for (int j = 0; j < numberOfInputChannels; j++) {
       // copy values from ofApp to MLTK
-      channelAudioBuffers[j][i] = (Real) channelSoundBuffers[j][i];
-      accum += channelAudioBuffers[j][i];
+      if (channelSoundBuffers[j].size() == frameSize) {
+        channelAudioBuffers[j][i] = (Real) channelSoundBuffers[j][i];
+        accum += channelAudioBuffers[j][i];
+      }
     }
 
     monoAudioBuffer[i] = (Real) accum / numberOfInputChannels;
