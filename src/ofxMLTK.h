@@ -58,7 +58,17 @@ using namespace scheduler;
 
 class MLTK {
 public:
-  MLTK() noexcept;
+//  MLTK() noexcept;
+  MLTK() {
+    for (int i = 0; i < numberOfInputChannels; i++) {
+      channelSoundBuffers[i] = ofSoundBuffer();
+      channelAudioBuffers[i] = vector<Real>();
+      chPools[i] = Pool();
+      chPoolAggrs[i] = Pool();
+      chPoolStats[i] = Pool();
+      chAlgorithms[i] = map<string, essentia::streaming::Algorithm*>();
+    }
+  }
   
   // This boolean is used to toggle the recording of data to an output
   // file in the YAML format. YAML is a data format similar to JSON
@@ -88,7 +98,7 @@ public:
 
   // Pointer to the algorithm network
   scheduler::Network *monoNetwork=NULL;
-  map<int, scheduler::Network *> chNetworks;
+  map<int, scheduler::Network*> chNetworks;
 
   // Pool objects for collecting, aggregating, and holding statistics.
   Pool monoPool, monoPoolAggr, monoPoolStats;
@@ -105,7 +115,7 @@ public:
 
   int numberOfOutputChannels = 0;
   // This should match the number of input channels in your input
-  int numberOfInputChannels = 2;
+  int numberOfInputChannels = 4;
   // the sampleRate should match the rate of of your sound card, you can check
   // this "Audio MIDI Setup.app" found in the Utilities folder of Applications
   int sampleRate = 44100;
@@ -141,8 +151,8 @@ public:
                        int channel = -1);
 
   void connectAlgorithmStream(VectorInput<Real>* inputVec,
-                              map<string, Algorithm*> algorithms,
-                              Pool pool);
+                              map<string, Algorithm*>& algorithms,
+                              Pool& pool);
 
   void update();
   void run();

@@ -25,16 +25,6 @@
 #include "ofMain.h"
 #include "ofxMLTK.h"
 
-MLTK::MLTK() noexcept {
-  for (int i = 0; i < numberOfInputChannels; i++) {
-    channelSoundBuffers[i] = ofSoundBuffer();
-    channelAudioBuffers[i] = vector<Real>();
-    chPools[i] = Pool();
-    chPoolAggrs[i] = Pool();
-    chPoolStats[i] = Pool();
-  }
-}
-
 template <typename... Params>
 void MLTK::create(map<string, Algorithm*> &m, essentia::streaming::AlgorithmFactory& f, string algo, Params... params){
   m[algo] =  f.create(algo);
@@ -45,16 +35,12 @@ void MLTK::setupAlgorithms(essentia::streaming::AlgorithmFactory& f,
                            int channel) {
 
   // Using Essentia's VectorInput type and pointing it at the audioBuffer reference
-//  const VectorInput<Real>* newInputVec = new VectorInput<Real>(&audioBuffer);
-//  inputX = new VectorInput<Real>(&smoothingBuffer);
-//  newInputVec->setVector(&audioBuffer);
-//  inputX->setVector(&smoothingBuffer);
   if (channel < 0) {
-    monoInputVec = new VectorInput<Real>(&audioBuffer);
-    monoInputVec->setVector(&audioBuffer);
+    monoInputVec = new VectorInput<Real>(&monoAudioBuffer);
+    monoInputVec->setVector(&monoAudioBuffer);
   } else {
-    channelInputVectors[channel] = new VectorInput<Real>(&audioBuffer);
-    channelInputVectors[channel]->setVector(&audioBuffer);
+    channelInputVectors[channel] = new VectorInput<Real>(&channelAudioBuffers[channel]);
+    channelInputVectors[channel]->setVector(&channelAudioBuffers[channel]);
   }
 
   map<string, essentia::streaming::Algorithm*> algorithms = {
@@ -526,30 +512,28 @@ void MLTK::setupAlgorithms(essentia::streaming::AlgorithmFactory& f,
                                         "filename", fileName,
                                         "sampleRate", sampleRate);
   }
-
+  
   if (channel < 0) {
-//    monoInputVec = newInputVec;
     monoAlgorithms = algorithms;
   } else {
-//    channelInputVectors[channel] = newInputVec;
     chAlgorithms[channel] = algorithms;
   }
 }
 
-
+// TODO: make inputVec a reference ??
 void MLTK::connectAlgorithmStream(VectorInput<Real>* inputVec,
-                                  map<string, Algorithm*> algorithms,
-                                  Pool pool) {
+                                  map<string, Algorithm*>& algorithms,
+                                  Pool& pool) {
   std::cout << "-------- connecting algorithm stream --------" << std::endl;
 
   // We start with the incoming signal that was attached to inputVec
   *inputVec >> algorithms["DCRemoval"]->input("signal");
 
-//  *inputVec >> algorithms["CubicSpline"]->input("x");
+//  *inputVec >> monoAlgorithms["CubicSpline"]->input("x");
 
-//  algorithms["CubicSpline"]->output("y") >> PC(pool, "CubicSpline.y");
-//  algorithms["CubicSpline"]->output("dy") >> PC(pool, "CubicSpline.dy");;
-//  algorithms["CubicSpline"]->output("ddy") >> PC(pool, "CubicSpline.ddy");;
+//  monoAlgorithms["CubicSpline"]->output("y") >> PC(pool, "CubicSpline.y");
+//  monoAlgorithms["CubicSpline"]->output("dy") >> PC(pool, "CubicSpline.dy");;
+//  monoAlgorithms["CubicSpline"]->output("ddy") >> PC(pool, "CubicSpline.ddy");;
   
   // Remember that all the strings match 1:1 with Essentia's reference documentation.
   // Algorithms can have an unlimited number of OUTPUTS but every input must
@@ -563,7 +547,6 @@ void MLTK::connectAlgorithmStream(VectorInput<Real>* inputVec,
   algorithms["Windowing"]->output("frame") >> algorithms["Spectrum"]->input("frame");
   algorithms["LargeWindowing"]->output("frame") >> algorithms["Chromagram"]->input("frame");
   algorithms["Chromagram"]->output("chromagram") >> PC(pool, "chromagram");
-//  algorithms["Windowing"]->output("frame") >> algorithms["Chromagram"]->input("frame");
   algorithms["Spectrum"]->output("spectrum")  >> algorithms["MFCC"]->input("spectrum");
   algorithms["Spectrum"]->output("spectrum") >> algorithms["SpectralPeaks"]->input("spectrum");
   algorithms["SpectralPeaks"]->output("frequencies") >> algorithms["HPCP"]->input("frequencies");
@@ -587,7 +570,7 @@ void MLTK::setup(int frameSize=1024, int sampleRate=44100, int hopSize=512){
 
   monoAudioBuffer.resize(frameSize, 0.0);
   for (int i = 0; i < numberOfInputChannels; i++) {
-    // HACKHACK: questionable... because ofApp::audioIn should size it
+    // HACKHACK: questionable... because ofApp::audioIn should size it?
     channelSoundBuffers[i].getBuffer().resize(frameSize, 0.0);
     channelAudioBuffers[i].resize(frameSize, 0.0);
   }
@@ -600,11 +583,8 @@ void MLTK::setup(int frameSize=1024, int sampleRate=44100, int hopSize=512){
   connectAlgorithmStream(monoInputVec, monoAlgorithms, monoPool);
 
   for (int i = 0; i < numberOfInputChannels; i++) {
-    // setting the vector happens in setupAlgorithms() now
-    // channelInputVectors[i] = new VectorInput<Real>(&channelBuffers[i]);
-    // channelInputVectors[i]->setVector(&channelBuffers[i]);
-//    setupAlgorithms(factory, channelAudioBuffers[i], i);
-//    connectAlgorithmStream(channelInputVectors[i], chAlgorithms[i], chPools[i]);
+    setupAlgorithms(factory, channelAudioBuffers[i], i);
+    connectAlgorithmStream(channelInputVectors[i], chAlgorithms[i], chPools[i]);
   }
 
   factory.shutdown();
@@ -612,10 +592,10 @@ void MLTK::setup(int frameSize=1024, int sampleRate=44100, int hopSize=512){
   monoNetwork = new scheduler::Network(monoInputVec);
   monoNetwork->run();
 
-//  for (int i = 0; i < numberOfInputChannels; i++) {
-//    chNetworks[i] = new scheduler::Network(channelInputVectors[i]);
-//    chNetworks[i]->run();
-//  }
+  for (int i = 0; i < numberOfInputChannels; i++) {
+    chNetworks[i] = new scheduler::Network(channelInputVectors[i]);
+    chNetworks[i]->run();
+  }
 }
 
 void MLTK::run(){
@@ -631,44 +611,39 @@ void MLTK::run(){
   monoNetwork->reset();
   monoNetwork->run();
 
-//  for (int i = 0; i < numberOfInputChannels; i++) {
-//    chNetworks[i]->reset();
-//    chNetworks[i]->run();
-//  }
+  for (int i = 0; i < numberOfInputChannels; i++) {
+    chNetworks[i]->reset();
+    chNetworks[i]->run();
+  }
 
   if (recording) {
     aggr->input("input").set(monoPool);
     aggr->output("output").set(monoPoolAggr);
     aggr->compute();
 
-//    for (int i = 0; i < numberOfInputChannels; i++) {
-//      chAggr[i]->input("input").set(chPools[i]);
-//      chAggr[i]->input("output").set(chPoolAggrs[i]);
-//      chAggr[i]->compute();
-//    }
+    for (int i = 0; i < numberOfInputChannels; i++) {
+      chAggr[i]->input("input").set(chPools[i]);
+      chAggr[i]->input("output").set(chPoolAggrs[i]);
+      chAggr[i]->compute();
+    }
   }
 }
 
 template <class mType>
 bool MLTK::exists(string algorithm, int channel){
-  Pool pool = channel < 0 ? monoPool : chPools[channel];
-  return pool.contains<mType>(algorithm);
+  return (channel < 0 ? monoPool : chPools[channel]).contains<mType>(algorithm);
 };
 
 vector<Real> MLTK::getData(string algorithm, int channel){
-  Pool pool = channel < 0 ? monoPool : chPools[channel];
-  return pool.value<vector<vector<Real>>>(algorithm)[0];
+  return (channel < 0 ? monoPool : chPools[channel]).value<vector<vector<Real>>>(algorithm)[0];
 };
 
 vector<vector<Real>> MLTK::getRaw(string algorithm, int channel){
-  Pool pool = channel < 0 ? monoPool : chPools[channel];
-  return pool.value<vector<vector<Real>>>(algorithm);
+  return (channel < 0 ? monoPool : chPools[channel]).value<vector<vector<Real>>>(algorithm);
 };
 
 Real MLTK::getValue(string algorithm, int channel){
-  Pool pool = channel < 0 ? monoPool : chPools[channel];
-  Real val = pool.value<vector<Real>>(algorithm)[0];
-  return val;
+  return (channel < 0 ? monoPool : chPools[channel]).value<vector<Real>>(algorithm)[0];
 };
 
 void MLTK::update(){
