@@ -736,7 +736,6 @@ void MLTK::connectAlgorithmStream(essentia::streaming::AlgorithmFactory& factory
   algorithms["FrameCutter"]->output("frame") >> algorithms["Windowing"]->input("frame");
   algorithms["Windowing"]->output("frame") >> algorithms["RMS"]->input("array");
   algorithms["Windowing"]->output("frame") >> algorithms["Spectrum"]->input("frame");
-  algorithms["Windowing"]->output("frame") >> algorithms["Chromagram"]->input("frame");
   algorithms["Spectrum"]->output("spectrum")  >> algorithms["MFCC"]->input("spectrum");
   algorithms["Spectrum"]->output("spectrum") >> algorithms["SpectralPeaks"]->input("spectrum");
   algorithms["SpectralPeaks"]->output("frequencies") >> algorithms["HPCP"]->input("frequencies");
