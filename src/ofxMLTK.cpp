@@ -53,7 +53,7 @@ void MLTK::setupAlgorithms(essentia::streaming::AlgorithmFactory& f,
     //
     // The algorithm throws exception when input is either empty or contains only zeros.
 //    { "AfterMaxToBeforeMaxEnergyRatio", f.create("AfterMaxToBeforeMaxEnergyRatio") },
-    
+      
     // DerivativeSFX
     // inputs: envelope (vector_real) - the envelope of the signal
     // output: derAvAfterMax (real) - the weighted average of the derivative after the maximum amplitude
@@ -540,27 +540,27 @@ void MLTK::connectAlgorithmStream(VectorInput<Real>* inputVec,
   // always have exactly 1 connection.
   // (tl;dr; inputs always need to be connected)
   algorithms["DCRemoval"]->output("signal") >> algorithms["FrameCutter"]->input("signal");
-  algorithms["DCRemoval"]->output("signal") >> algorithms["LargeFrameCutter"]->input("signal");
+//  algorithms["DCRemoval"]->output("signal") >> algorithms["LargeFrameCutter"]->input("signal");
   algorithms["FrameCutter"]->output("frame") >> algorithms["Windowing"]->input("frame");
-  algorithms["LargeFrameCutter"]->output("frame") >> algorithms["LargeWindowing"]->input("frame");
+//  algorithms["LargeFrameCutter"]->output("frame") >> algorithms["LargeWindowing"]->input("frame");
   algorithms["Windowing"]->output("frame") >> algorithms["RMS"]->input("array");
   algorithms["Windowing"]->output("frame") >> algorithms["Spectrum"]->input("frame");
-  algorithms["LargeWindowing"]->output("frame") >> algorithms["Chromagram"]->input("frame");
-  algorithms["Chromagram"]->output("chromagram") >> PC(pool, "chromagram");
+//  algorithms["LargeWindowing"]->output("frame") >> algorithms["Chromagram"]->input("frame");
+//  algorithms["Chromagram"]->output("chromagram") >> PC(pool, "chromagram");
   algorithms["Spectrum"]->output("spectrum")  >> algorithms["MFCC"]->input("spectrum");
-  algorithms["Spectrum"]->output("spectrum") >> algorithms["SpectralPeaks"]->input("spectrum");
-  algorithms["SpectralPeaks"]->output("frequencies") >> algorithms["HPCP"]->input("frequencies");
-  algorithms["SpectralPeaks"]->output("magnitudes") >> algorithms["HPCP"]->input("magnitudes");
+//  algorithms["Spectrum"]->output("spectrum") >> algorithms["SpectralPeaks"]->input("spectrum");
+//  algorithms["SpectralPeaks"]->output("frequencies") >> algorithms["HPCP"]->input("frequencies");
+//  algorithms["SpectralPeaks"]->output("magnitudes") >> algorithms["HPCP"]->input("magnitudes");
 
   // Pool Outputs
   algorithms["DCRemoval"]->output("signal") >> PC(pool, "DCRemoval");
   algorithms["FrameCutter"]->output("frame") >> PC(pool, "FrameCutter");
-  algorithms["Windowing"]->output("frame") >> PC(pool, "Windowing");
+//  algorithms["Windowing"]->output("frame") >> PC(pool, "Windowing");
   algorithms["RMS"]->output("rms") >> PC(pool, "RMS");
   algorithms["Spectrum"]->output("spectrum")  >>  PC(pool, "Spectrum");
   algorithms["MFCC"]->output("mfcc") >> PC(pool, "MFCC.coefs");
   algorithms["MFCC"]->output("bands") >> PC(pool, "MFCC.bands");
-  algorithms["HPCP"]->output("hpcp") >> PC(pool, "HPCP");
+//  algorithms["HPCP"]->output("hpcp") >> PC(pool, "HPCP");
 }
 
 void MLTK::setup(int frameSize=1024, int sampleRate=44100, int hopSize=512){
