@@ -701,39 +701,33 @@ void MLTK::connectAlgorithmStream(VectorInput<Real>* inputVec,
 
   // We start with the incoming signal that was attached to inputVec
   *inputVec >> algorithms["DCRemoval"]->input("signal");
-
-//  *inputVec >> monoAlgorithms["CubicSpline"]->input("x");
-
-//  monoAlgorithms["CubicSpline"]->output("y") >> PC(pool, "CubicSpline.y");
-//  monoAlgorithms["CubicSpline"]->output("dy") >> PC(pool, "CubicSpline.dy");;
-//  monoAlgorithms["CubicSpline"]->output("ddy") >> PC(pool, "CubicSpline.ddy");;
   
   // Remember that all the strings match 1:1 with Essentia's reference documentation.
   // Algorithms can have an unlimited number of OUTPUTS but every input must
   // always have exactly 1 connection.
   // (tl;dr; inputs always need to be connected)
   algorithms["DCRemoval"]->output("signal") >> algorithms["FrameCutter"]->input("signal");
-//  algorithms["DCRemoval"]->output("signal") >> algorithms["LargeFrameCutter"]->input("signal");
+  algorithms["DCRemoval"]->output("signal") >> algorithms["LargeFrameCutter"]->input("signal");
   algorithms["FrameCutter"]->output("frame") >> algorithms["Windowing"]->input("frame");
-//  algorithms["LargeFrameCutter"]->output("frame") >> algorithms["LargeWindowing"]->input("frame");
+  algorithms["LargeFrameCutter"]->output("frame") >> algorithms["LargeWindowing"]->input("frame");
   algorithms["Windowing"]->output("frame") >> algorithms["RMS"]->input("array");
   algorithms["Windowing"]->output("frame") >> algorithms["Spectrum"]->input("frame");
-//  algorithms["LargeWindowing"]->output("frame") >> algorithms["Chromagram"]->input("frame");
-//  algorithms["Chromagram"]->output("chromagram") >> PC(pool, "chromagram");
+  algorithms["LargeWindowing"]->output("frame") >> algorithms["Chromagram"]->input("frame");
+  algorithms["Chromagram"]->output("chromagram") >> PC(pool, "chromagram");
   algorithms["Spectrum"]->output("spectrum")  >> algorithms["MFCC"]->input("spectrum");
-//  algorithms["Spectrum"]->output("spectrum") >> algorithms["SpectralPeaks"]->input("spectrum");
-//  algorithms["SpectralPeaks"]->output("frequencies") >> algorithms["HPCP"]->input("frequencies");
-//  algorithms["SpectralPeaks"]->output("magnitudes") >> algorithms["HPCP"]->input("magnitudes");
+  algorithms["Spectrum"]->output("spectrum") >> algorithms["SpectralPeaks"]->input("spectrum");
+  algorithms["SpectralPeaks"]->output("frequencies") >> algorithms["HPCP"]->input("frequencies");
+  algorithms["SpectralPeaks"]->output("magnitudes") >> algorithms["HPCP"]->input("magnitudes");
 
   // Pool Outputs
   algorithms["DCRemoval"]->output("signal") >> PC(pool, "DCRemoval");
   algorithms["FrameCutter"]->output("frame") >> PC(pool, "FrameCutter");
-//  algorithms["Windowing"]->output("frame") >> PC(pool, "Windowing");
+  algorithms["Windowing"]->output("frame") >> PC(pool, "Windowing");
   algorithms["RMS"]->output("rms") >> PC(pool, "RMS");
   algorithms["Spectrum"]->output("spectrum")  >>  PC(pool, "Spectrum");
   algorithms["MFCC"]->output("mfcc") >> PC(pool, "MFCC.coefs");
   algorithms["MFCC"]->output("bands") >> PC(pool, "MFCC.bands");
-//  algorithms["HPCP"]->output("hpcp") >> PC(pool, "HPCP");
+  algorithms["HPCP"]->output("hpcp") >> PC(pool, "HPCP");
 }
 
 void MLTK::setup(int frameSize=1024, int sampleRate=44100, int hopSize=512){
@@ -743,7 +737,6 @@ void MLTK::setup(int frameSize=1024, int sampleRate=44100, int hopSize=512){
 
   monoAudioBuffer.resize(frameSize, 0.0);
   for (int i = 0; i < numberOfInputChannels; i++) {
-    // HACKHACK: questionable... because ofApp::audioIn should size it?
     channelSoundBuffers[i].getBuffer().resize(frameSize, 0.0);
     channelAudioBuffers[i].resize(frameSize, 0.0);
   }
@@ -821,17 +814,17 @@ Real MLTK::getValue(string algorithm, int channel){
 
 void MLTK::update(){
   for (int i = 0; i < frameSize; i++){
-    float accum = 0.0;
+    float total = 0.0;
     
     for (int j = 0; j < numberOfInputChannels; j++) {
       // copy values from ofApp to MLTK
       if (channelSoundBuffers[j].size() == frameSize) {
         channelAudioBuffers[j][i] = (Real) channelSoundBuffers[j][i];
-        accum += channelAudioBuffers[j][i];
+        total += channelAudioBuffers[j][i];
       }
     }
 
-    monoAudioBuffer[i] = (Real) accum / numberOfInputChannels;
+    monoAudioBuffer[i] = (Real) total / numberOfInputChannels;
   }
 }
 
