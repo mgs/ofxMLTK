@@ -50,26 +50,17 @@ using namespace essentia;
 using namespace streaming;
 using namespace scheduler;
 
-//class baseMLTK {
-//public:
-//  virtual void algorithms(bool useThisInsteadOfDefault) = 0;
-//  virtual void chain(bool useThisInsteadOfDefault) = 0;
-//};
-
 class MLTK {
 public:
-//  MLTK() noexcept;
   MLTK() {
-    for (int i = 0; i < numberOfInputChannels; i++) {
-      channelSoundBuffers[i] = ofSoundBuffer();
-      channelAudioBuffers[i] = vector<Real>();
-      chPools[i] = Pool();
-      chPoolAggrs[i] = Pool();
-      chPoolStats[i] = Pool();
-      chAlgorithms[i] = map<string, essentia::streaming::Algorithm*>();
-    }
+    channelSoundBuffers.assign(numberOfInputChannels, ofSoundBuffer());
+    channelAudioBuffers.assign(numberOfInputChannels, vector<Real>());
+    chPools.assign(numberOfInputChannels, Pool());
+    chPoolAggrs.assign(numberOfInputChannels, Pool());
+    chPoolStats.assign(numberOfInputChannels, Pool());
+    chAlgorithms.assign(numberOfInputChannels, map<string, essentia::streaming::Algorithm*>());
   }
-  
+
   // This boolean is used to toggle the recording of data to an output
   // file in the YAML format. YAML is a data format similar to JSON
   bool recording = false;
@@ -79,18 +70,16 @@ public:
   bool accumulating = false;
 
   // These soundbuffers contain the data coming in from openFrameworks
-  map<int, ofSoundBuffer> channelSoundBuffers;
-  // Vector holding the individuals channels
-//  vector<ofSoundBuffer> channels;
+  vector<ofSoundBuffer> channelSoundBuffers;
 
   VectorInput<Real> *monoInputVec = NULL;
-  map<int, VectorInput<Real>*> channelInputVectors;
+  vector<VectorInput<Real>*> channelInputVectors;
 
   VectorInput<Real> *inputX;
 
   // a vector for handling input containing complex values
-//  VectorInput<std::complex<Real>> *complexInput;
-//  VectorOutput<std::vector<std::complex<Real>>> *complexOutput;
+  //  VectorInput<std::complex<Real>> *complexInput;
+  //  VectorOutput<std::vector<std::complex<Real>>> *complexOutput;
 
   // Ring buffer provided by essentia
   //  essentia::streaming::RingBufferInput *ringIn;
@@ -98,24 +87,24 @@ public:
 
   // Pointer to the algorithm network
   scheduler::Network *monoNetwork=NULL;
-  map<int, scheduler::Network*> chNetworks;
+  vector<scheduler::Network*> chNetworks;
 
   // Pool objects for collecting, aggregating, and holding statistics.
   Pool monoPool, monoPoolAggr, monoPoolStats;
-  map<int, Pool> chPools;
-  map<int, Pool> chPoolAggrs;
-  map<int, Pool> chPoolStats;
+  vector<Pool> chPools;
+  vector<Pool> chPoolAggrs;
+  vector<Pool> chPoolStats;
 
   // Dispatch Table, planned for future
 //  std::map<string, function<vector<Real>()>> db;
   map<string, essentia::streaming::Algorithm*> monoAlgorithms;
-  map<int, map<string, essentia::streaming::Algorithm*>> chAlgorithms;
+  vector<map<string, essentia::streaming::Algorithm*>> chAlgorithms;
 
   string fileName;
 
   int numberOfOutputChannels = 0;
   // This should match the number of input channels in your input
-  int numberOfInputChannels = 4;
+  int numberOfInputChannels = 1;
   // the sampleRate should match the rate of of your sound card, you can check
   // this "Audio MIDI Setup.app" found in the Utilities folder of Applications
   int sampleRate = 44100;
@@ -124,10 +113,10 @@ public:
   int numberOfBuffers = 1;
 
   essentia::standard::Algorithm *aggr, *output;
-  map<int, essentia::standard::Algorithm*> chAggr, chOutput;
+  vector<essentia::standard::Algorithm*> chAggr, chOutput;
 
   vector<Real> monoAudioBuffer;
-  map<int, vector<Real>> channelAudioBuffers;
+  vector<vector<Real>> channelAudioBuffers;
 
   vector<Real> smoothInput;
 
@@ -147,8 +136,9 @@ public:
   void create(map<string, Algorithm*> &m, essentia::streaming::AlgorithmFactory& f, string algo, Params... params);
 
   void setupAlgorithms(essentia::streaming::AlgorithmFactory& factory,
+                       VectorInput<Real>* inputVec,
                        vector<Real> audioBuffer,
-                       int channel = -1);
+                       map<string, Algorithm*>& algorithms);
 
   void connectAlgorithmStream(VectorInput<Real>* inputVec,
                               map<string, Algorithm*>& algorithms,
