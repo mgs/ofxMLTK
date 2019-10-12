@@ -26,9 +26,6 @@
 #define ofxMLTK_h
 
 #pragma once
-//#include <ctime>
-//using namespace std;
-//#include "ofMain.h"
 
 #include <cmath>
 #include <functional>
@@ -53,98 +50,103 @@ using namespace essentia;
 using namespace streaming;
 using namespace scheduler;
 
-//class baseMLTK {
-//public:
-//  virtual void algorithms(bool useThisInsteadOfDefault) = 0;
-//  virtual void chain(bool useThisInsteadOfDefault) = 0;
-//};
-
 class MLTK {
 public:
+  MLTK() {
+    channelSoundBuffers.assign(numberOfInputChannels, ofSoundBuffer());
+    channelAudioBuffers.assign(numberOfInputChannels, vector<Real>());
+    chPools.assign(numberOfInputChannels, Pool());
+    chPoolAggrs.assign(numberOfInputChannels, Pool());
+    chPoolStats.assign(numberOfInputChannels, Pool());
+    chAlgorithms.assign(numberOfInputChannels, map<string, essentia::streaming::Algorithm*>());
+  }
+
   // This boolean is used to toggle the recording of data to an output
   // file in the YAML format. YAML is a data format similar to JSON
   bool recording = false;
-  
-  
-  
+
   // This boolean controls whether the pool should accumulate values or
   // be cleared on each frame
   bool accumulating = false;
-  
-  // NOT CURRENTLY IMPLEMENTED
-//  // !!!IMPORTANT!!! To setup your own Algorithm stream set customMode to true
-//  // and implement setupCustomAlgorithms)() and connectUserAlgorithmStream().
-//  // setupAlgorithms() and connectAlgorithmStream() can be used as references.
-//  //  bool customMode = false;
-  // NOT CURRENTLY IMPLEMENTED
-  
+
   // These soundbuffers contain the data coming in from openFrameworks
-  ofSoundBuffer leftAudioBuffer, rightAudioBuffer;
-  
-  // Vector holding the individuals channels
-  vector<ofSoundBuffer> channels;
-  
-  // Not currently being used
-  // std::map<std::string, VectorInput<Real>> inputMap;
-  VectorInput<Real> *inputVec, *leftInputVec, *rightInputVec;
-  
+  vector<ofSoundBuffer> channelSoundBuffers;
+
+  VectorInput<Real> *monoInputVec = NULL;
+  vector<VectorInput<Real>*> channelInputVectors;
+
   VectorInput<Real> *inputX;
-  
+
   // a vector for handling input containing complex values
-//  VectorInput<std::complex<Real>> *complexInput;
-//  VectorOutput<std::vector<std::complex<Real>>> *complexOutput;
+  //  VectorInput<std::complex<Real>> *complexInput;
+  //  VectorOutput<std::vector<std::complex<Real>>> *complexOutput;
 
   // Ring buffer provided by essentia
   //  essentia::streaming::RingBufferInput *ringIn;
   //  essentia::streaming::RingBufferOutput *ringOut;
-  
+
   // Pointer to the algorithm network
-  scheduler::Network *network=NULL;
-  
+  scheduler::Network *monoNetwork=NULL;
+  vector<scheduler::Network*> chNetworks;
+
   // Pool objects for collecting, aggregating, and holding statistics.
-  Pool pool, poolAggr, poolStats;
+  Pool monoPool, monoPoolAggr, monoPoolStats;
+  vector<Pool> chPools;
+  vector<Pool> chPoolAggrs;
+  vector<Pool> chPoolStats;
 
   // Dispatch Table, planned for future
 //  std::map<string, function<vector<Real>()>> db;
-  map<string, Algorithm*> algorithms;
-  
+  map<string, essentia::streaming::Algorithm*> monoAlgorithms;
+  vector<map<string, essentia::streaming::Algorithm*>> chAlgorithms;
+
   string fileName;
-  
+
   int numberOfOutputChannels = 0;
-  int numberOfInputChannels = 2;
+  // This should match the number of input channels in your input
+  int numberOfInputChannels = 1;
+  // the sampleRate should match the rate of of your sound card, you can check
+  // this "Audio MIDI Setup.app" found in the Utilities folder of Applications
   int sampleRate = 44100;
   int frameSize = 1024;
   int hopSize = frameSize/2;
   int numberOfBuffers = 1;
 
   essentia::standard::Algorithm *aggr, *output;
-  
-  std::vector<Real> audioBuffer;
+  vector<essentia::standard::Algorithm*> chAggr, chOutput;
 
-  std::vector<Real> smoothInput;
-  
+  vector<Real> monoAudioBuffer;
+  vector<vector<Real>> channelAudioBuffers;
+
+  vector<Real> smoothInput;
+
   int binsPerOctave = 12;
   
   template <class mType>
-  bool exists(string algorithm);
+  bool exists(string algorithm, int channel = -1);
   
-  Real getValue(string algorithm);
-  vector<Real> getData(string algorithm);
-  vector<vector<Real>> getRaw(string algorithm);
+  // -1 = mono aggregate channel
+  Real getValue(string algorithm, int channel = -1);
+  vector<Real> getData(string algorithm, int channel = -1);
+  vector<vector<Real>> getRaw(string algorithm, int channel = -1);
   
   void setup(int frameSize, int sampleRate, int hopSize);
-  
-  void setupAlgorithms(essentia::streaming::AlgorithmFactory& factory);
-  
-  void connectAlgorithmStream(essentia::streaming::AlgorithmFactory& factory);
-  
+
   template <typename... Params>
   void create(map<string, Algorithm*> &m, essentia::streaming::AlgorithmFactory& f, string algo, Params... params);
-    
+
+  void setupAlgorithms(essentia::streaming::AlgorithmFactory& factory,
+                       VectorInput<Real>* inputVec,
+                       vector<Real> audioBuffer,
+                       map<string, Algorithm*>& algorithms);
+
+  void connectAlgorithmStream(VectorInput<Real>* inputVec,
+                              map<string, Algorithm*>& algorithms,
+                              Pool& pool);
+
   void update();
   void run();
   void save();
-  
   void exit();
 };
 
