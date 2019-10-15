@@ -72,14 +72,15 @@ public:
   bool accumulating = false;
   
   // NOT CURRENTLY IMPLEMENTED
-//  // !!!IMPORTANT!!! To setup your own Algorithm stream set customMode to true
-//  // and implement setupCustomAlgorithms)() and connectUserAlgorithmStream().
-//  // setupAlgorithms() and connectAlgorithmStream() can be used as references.
-//  //  bool customMode = false;
+  //  // !!!IMPORTANT!!! To setup your own Algorithm stream set customMode to true
+  //  // and implement setupCustomAlgorithms)() and connectUserAlgorithmStream().
+  //  // setupAlgorithms() and connectAlgorithmStream() can be used as references.
+  //  //  bool customMode = false;
   // NOT CURRENTLY IMPLEMENTED
   
   // These soundbuffers contain the data coming in from openFrameworks
-  ofSoundBuffer leftAudioBuffer, rightAudioBuffer;
+  //  ofSoundBuffer leftAudioBuffer, rightAudioBuffer;
+  vector<Real> leftAudioBuffer, rightAudioBuffer;
   
   // Vector holding the individuals channels
   vector<ofSoundBuffer> channels;
@@ -91,8 +92,8 @@ public:
   VectorInput<Real> *inputX;
   
   // a vector for handling input containing complex values
-//  VectorInput<std::complex<Real>> *complexInput;
-//  VectorOutput<std::vector<std::complex<Real>>> *complexOutput;
+  //  VectorInput<std::complex<Real>> *complexInput;
+  //  VectorOutput<std::vector<std::complex<Real>>> *complexOutput;
 
   // Ring buffer provided by essentia
   //  essentia::streaming::RingBufferInput *ringIn;
@@ -105,7 +106,7 @@ public:
   Pool pool, poolAggr, poolStats;
 
   // Dispatch Table, planned for future
-//  std::map<string, function<vector<Real>()>> db;
+  //  std::map<string, function<vector<Real>()>> db;
   map<string, Algorithm*> algorithms;
   
   string fileName;
@@ -113,7 +114,7 @@ public:
   int numberOfOutputChannels = 0;
   int numberOfInputChannels = 2;
   int sampleRate = 44100;
-  int frameSize = 1024;
+  int frameSize = 2048;
   int hopSize = frameSize/2;
   int numberOfBuffers = 1;
 
@@ -129,18 +130,25 @@ public:
   bool exists(string algorithm);
   
   Real getValue(string algorithm);
+  Real getMeanValue(string algorithm);
   vector<Real> getData(string algorithm);
+  vector<Real> getMeanData(string algorithm);
   vector<vector<Real>> getRaw(string algorithm);
   
   void setup(int frameSize, int sampleRate, int hopSize);
-  
+
+  // Loads most of Essentia's streaming algorithms into the algorithm registry
   void setupAlgorithms(essentia::streaming::AlgorithmFactory& factory);
-  
+
+  // Connects a user-defined algorithm chain
   void connectAlgorithmStream(essentia::streaming::AlgorithmFactory& factory);
-  
+
+  // Connects a default algorithm chain
+  void connectDefaultAlgorithmStream(essentia::streaming::AlgorithmFactory& factory);
+
   template <typename... Params>
   void create(map<string, Algorithm*> &m, essentia::streaming::AlgorithmFactory& f, string algo, Params... params);
-    
+
   void update();
   void run();
   void save();

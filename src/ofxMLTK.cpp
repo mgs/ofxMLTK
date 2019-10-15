@@ -37,14 +37,6 @@ void MLTK::setupAlgorithms(essentia::streaming::AlgorithmFactory& f){
   inputVec->setVector(&audioBuffer);
 //  inputX->setVector(&smoothingBuffer);
 
-    // if a file is passed, load it into one of essentia's MonoLoader objects
-    // which creates a mono data stream, demuxing stereo if needed.
-  if(fileName.length() > 0){
-    algorithms["MonoLoader"] = f.create("MonoLoader",
-                                              "filename", fileName,
-                                              "sampleRate", sampleRate);
-  }
-
   algorithms = {
     // Envelope/SFX category
     //
@@ -120,7 +112,6 @@ void MLTK::setupAlgorithms(essentia::streaming::AlgorithmFactory& f){
     // See Also: Envelope (streaming) RealAccumulator (streaming)
     { "LogAttackTime", f.create("LogAttackTime") },
     
-    
     { "MaxToTotal", f.create("MaxToTotal") },
     
     { "MinToTotal", f.create("MinToTotal") },
@@ -136,10 +127,13 @@ void MLTK::setupAlgorithms(essentia::streaming::AlgorithmFactory& f){
     { "BandPass", f.create("BandPass") },
     
     { "BandReject", f.create("BandReject") },
-    
+
     { "DCRemoval", f.create("DCRemoval",
-                                  "sampleRate", sampleRate) },
-    
+                            "sampleRate", sampleRate) },
+
+    { "LargeDCRemoval", f.create("DCRemoval",
+                                 "sampleRate", sampleRate) },
+
     { "EqualLoudness", f.create("EqualLoudness") },
     
     { "HighPass", f.create("HighPass") },
@@ -229,16 +223,15 @@ void MLTK::setupAlgorithms(essentia::streaming::AlgorithmFactory& f){
     //    startFromZero = false: a frame is the last one if its center position is at or beyond the end of the stream
     //    In both cases the start time of the last frame is never beyond the end of the stream.
     { "FrameCutter", f.create("FrameCutter",
-                                    "frameSize", frameSize,
-                                    "hopSize", hopSize) },
+                              "frameSize", 2048,
+                              "hopSize", 1024,
+                              "startFromZero", false) },
 
     { "LargeFrameCutter", f.create("FrameCutter",
-                                    "frameSize", frameSize*32,
-                                    "hopSize", hopSize*32) },
+                                    "frameSize", 32768,
+                                    "hopSize", 16384) },
 
-//                                    "startFromZero", true,
-//                                    "validFrameThresholdRatio", 0,
-//                                    "lastFrameToEndOfFile", true) },
+//                                    ) },
 //
     //    Python Only
     //    { "FrameGenerator", f.create("FrameGenerator") },
@@ -326,7 +319,8 @@ void MLTK::setupAlgorithms(essentia::streaming::AlgorithmFactory& f){
     
     { "HFC", f.create("HFC") },
     
-    { "LPC", f.create("LPC") },
+    { "LPC", f.create("LPC",
+                      "order", 2) },
     
     { "MFCC", f.create("MFCC") },
     
@@ -683,9 +677,17 @@ void MLTK::setupAlgorithms(essentia::streaming::AlgorithmFactory& f){
     { "Centroid",  f.create("Centroid", "range", sampleRate/2) },
     
     { "MFCC", f.create("MFCC",
-                             "normalize", "unit_sum",
-                             "highFrequencyBound", 12000) },
+                       "normalize", "unit_sum",
+                       "highFrequencyBound", 11000) },
   };
+
+  // if a file is passed, load it into one of essentia's MonoLoader objects
+  // which creates a mono data stream, demuxing stereo if needed.
+  if(fileName.length() > 0){
+    algorithms["MonoLoader"] = f.create("MonoLoader",
+                                              "filename", fileName,
+                                              "sampleRate", sampleRate);
+  }
 }
 
 //void MLTK::connectAlgorithmStream(essentia::streaming::AlgorithmFactory& factory){
@@ -723,32 +725,99 @@ void MLTK::setupAlgorithms(essentia::streaming::AlgorithmFactory& f){
 //
 //  f.shutdown();
 //}
+void MLTK::connectDefaultAlgorithmStream(essentia::streaming::AlgorithmFactory& factory){
+  /////////// CONNECTING DEFAULT ALGORITHMS ////////////////
+  //  w->output("frame") >> chromagram->input("frame");
+  //  chromagram->output("chromagram") >> PC(pool, "chroma");
+  //fft->input("frame");
+  //  fft->output("frame") >> fftc->input("frame");
+  //  cq->output("constantq") >> PC(pool, "cq");
+  //  *inputVec >> fc->input("signal");
+  cout << "-------- connecting algos --------" << endl;
 
+  //RMS
+  //  ringIn->output("signal") >> dcremoval->input("signal");
+
+  *inputVec >> algorithms["DCRemoval"]->input("signal");
+
+  algorithms["DCRemoval"]->output("signal") >> algorithms["FrameCutter"]->input("signal");
+
+  algorithms["FrameCutter"]->output("frame") >> algorithms["Windowing"]->input("frame");
+
+  algorithms["Windowing"]->output("frame") >> algorithms["FFT"]->input("frame");
+
+  //  cout << "Connecting RMS" << endl;
+
+  algorithms["Windowing"]->output("frame") >> algorithms["RMS"]->input("array");
+
+  *inputVec >> algorithms["LargeDCRemoval"]->input("signal");
+
+  algorithms["LargeDCRemoval"]->output("signal") >> algorithms["LargeFrameCutter"]->input("signal");
+  //  fc2->output("frame") >> w2->input("frame");
+  algorithms["LargeFrameCutter"]->output("frame") >> algorithms["LPC"]->input("frame");
+  //  w2->output("frame") >> fft2->input("frame");
+  algorithms["LargeFrameCutter"]->output("frame") >> algorithms["LargeWindowing"]->input("frame");
+  algorithms["LargeWindowing"]->output("frame") >> algorithms["Chromagram"]->input("frame");
+  algorithms["Windowing"]->output("frame") >> algorithms["Spectrum"]->input("frame");
+  // GFCC -- gammatone feature cepstrum coefficients
+  //    cout << 6 << endl;
+  algorithms["Spectrum"]->output("spectrum")  >>  algorithms["GFCC"]->input("spectrum");
+  //    cout << 7 << endl;
+  algorithms["Spectrum"]->output("spectrum")  >>  algorithms["BFCC"]->input("spectrum");
+  // MFCC -- mel frequency cepstrum coefficients
+  //    cout << 8 << endl;
+  algorithms["Spectrum"]->output("spectrum")  >> algorithms["MFCC"]->input("spectrum");
+  //    cout << 9 << endl;
+  algorithms["Spectrum"]->output("spectrum")  >>  algorithms["SpectralPeaks"]->input("spectrum");
+  //    cout << 10 << endl;
+  algorithms["SpectralPeaks"]->output("frequencies") >> algorithms["HPCP"]->input("frequencies");
+  //    cout << 11 << endl;
+  algorithms["SpectralPeaks"]->output("magnitudes") >> algorithms["HPCP"]->input("magnitudes");
+  algorithms["FFT"]->output("fft") >> algorithms["CartesianToPolar"]->input("complex");
+  // Pool Outputs
+  algorithms["LPC"]->output("lpc") >> PC(pool, "LPC.coefs");
+  algorithms["LPC"]->output("reflection") >> PC(pool, "LPC.reflection");
+  algorithms["DCRemoval"]->output("signal") >> PC(pool, "DCRemoval");
+  algorithms["FrameCutter"]->output("frame") >> PC(pool, "FrameCutter");
+  algorithms["LargeFrameCutter"]->output("frame") >> PC(pool, "LargeFrameCutter");
+  algorithms["Windowing"]->output("frame") >> PC(pool, "Windowing");
+  algorithms["RMS"]->output("rms") >> PC(pool, "RMS");
+  //  fft->output("fft") >> PC(pool, "fft");
+  algorithms["Spectrum"]->output("spectrum") >> PC(pool, "Spectrum");
+  algorithms["BFCC"]->output("bands") >> PC(pool, "BFCC.bands");
+  algorithms["BFCC"]->output("bfcc") >> PC(pool, "BFCC.coefs");
+  algorithms["GFCC"]->output("bands") >> PC(pool, "GFCC.bands");
+  algorithms["GFCC"]->output("gfcc")  >>  PC(pool, "GFCC.coefs");
+  algorithms["MFCC"]->output("bands") >> PC(pool, "MFCC.bands");
+  algorithms["MFCC"]->output("mfcc") >> PC(pool, "MFCC.coefs");
+  algorithms["HPCP"]->output("hpcp") >> PC(pool, "HPCP");
+  //  *inputVec >> algorithms["CubicSpline"]->input("x");
+
+  //  algorithms["CubicSpline"]->output("y") >> PC(pool, "CubicSpline.y");
+  //  algorithms["CubicSpline"]->output("dy") >> PC(pool, "CubicSpline.dy");;
+  //  algorithms["CubicSpline"]->output("ddy") >> PC(pool, "CubicSpline.ddy");;
+  algorithms["CartesianToPolar"]->output("magnitude") >> PC(pool, "Magnitudes");
+  algorithms["CartesianToPolar"]->output("phase") >> PC(pool, "Phases");
+  algorithms["Chromagram"]->output("chromagram") >> PC(pool, "Chromagram");
+}
 
 void MLTK::connectAlgorithmStream(essentia::streaming::AlgorithmFactory& factory){
   std::cout << "-------- connecting algorithm stream --------" << std::endl;
   
   // We start with the incoming signal that was attached to inputVec
-  *inputVec >> algorithms["DCRemoval"]->input("signal");
+  *inputVec >> algorithms["FrameCutter"]->input("signal");
+  //algorithms["DCRemoval"]->input("signal");
 
-//  *inputVec >> algorithms["CubicSpline"]->input("x");
-  
-//  algorithms["CubicSpline"]->output("y") >> PC(pool, "CubicSpline.y");
-//  algorithms["CubicSpline"]->output("dy") >> PC(pool, "CubicSpline.dy");;
-//  algorithms["CubicSpline"]->output("ddy") >> PC(pool, "CubicSpline.ddy");;
-  
+
   // Remember that all the strings match 1:1 with Essentia's reference documentation.
   // Algorithms can have an unlimited number of OUTPUTS but every input must
   // always have exactly 1 connection.
   // (tl;dr; inputs always need to be connected)
-  algorithms["DCRemoval"]->output("signal") >> algorithms["FrameCutter"]->input("signal");
-  algorithms["DCRemoval"]->output("signal") >> algorithms["LargeFrameCutter"]->input("signal");
+//  algorithms["DCRemoval"]->output("signal") >>
+//  *inputVec >> algorithms["LargeFrameCutter"]->input("signal");
   algorithms["FrameCutter"]->output("frame") >> algorithms["Windowing"]->input("frame");
-  algorithms["LargeFrameCutter"]->output("frame") >> algorithms["LargeWindowing"]->input("frame");
   algorithms["Windowing"]->output("frame") >> algorithms["RMS"]->input("array");
   algorithms["Windowing"]->output("frame") >> algorithms["Spectrum"]->input("frame");
-  algorithms["LargeWindowing"]->output("frame") >> algorithms["Chromagram"]->input("frame");
-  algorithms["Chromagram"]->output("chromagram") >> PC(pool, "chromagram");
     //  algorithms["Windowing"]->output("frame") >> algorithms["Chromagram"]->input("frame");
   algorithms["Spectrum"]->output("spectrum")  >> algorithms["MFCC"]->input("spectrum");
   algorithms["Spectrum"]->output("spectrum") >> algorithms["SpectralPeaks"]->input("spectrum");
@@ -772,22 +841,25 @@ void MLTK::connectAlgorithmStream(essentia::streaming::AlgorithmFactory& factory
 
 void MLTK::setup(int frameSize=1024, int sampleRate=44100, int hopSize=512){
   this->frameSize = frameSize;
-  this->sampleRate = frameSize;
-  this->hopSize = frameSize;
+  this->sampleRate = sampleRate;
+  this->hopSize = hopSize;
 
   audioBuffer.resize(frameSize, 0.0);
-  leftAudioBuffer.getBuffer().resize(frameSize, 0.0);
-  rightAudioBuffer.getBuffer().resize(frameSize, 0.0);
+//  leftAudioBuffer.getBuffer().resize(frameSize, 0.0);
+//  rightAudioBuffer.getBuffer().resize(frameSize, 0.0);
+  leftAudioBuffer.resize(frameSize, 0.0);
+  rightAudioBuffer.resize(frameSize, 0.0);
 
   essentia::init();
   
   essentia::streaming::AlgorithmFactory& f = essentia::streaming::AlgorithmFactory::instance();
   f.init();
   setupAlgorithms(f);
-  connectAlgorithmStream(f);
+  connectDefaultAlgorithmStream(f);
   f.shutdown();
   network = new scheduler::Network(inputVec);
   network->run();
+  
 }
 
 void MLTK::run(){
@@ -811,12 +883,16 @@ bool MLTK::exists(string algorithm){
   return pool.contains<mType>(algorithm);
 };
 
-vector<Real> MLTK::getData(string algorithm){
-//  if(exists<vector<Real>>(algorithm)){
-    return pool.value<vector<vector<Real>>>(algorithm)[0];
-//  } else {
-//    cout << "No data in pool for: " + algorithm << ". Is the spelling good?";
-//  }
+vector<float> MLTK::getMeanData(string algorithm){
+  return meanFrames(pool.value<vector<vector<Real>>>(algorithm));
+};
+
+vector<float> MLTK::getData(string algorithm){
+  if(hopSize == frameSize/2){
+    return pool.value<vector<vector<Real>>>(algorithm)[1];
+  } else {
+    cout << "hopSize is not equal to frameSize/2";
+  }
 };
 
 vector<vector<Real>> MLTK::getRaw(string algorithm){
