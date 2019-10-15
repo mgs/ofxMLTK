@@ -98,7 +98,7 @@ linuxarmv7l:
 android/armeabi:	
 android/armeabi-v7a:	
 osx:
-ADDON_LIB	ADDON_LDFLAGS = -Flibs/frameworks -framework VideoToolbox -framework QtCore
+ADDON_LDFLAGS = -Flibs/frameworks -framework VideoToolbox -framework QtCore
 ADDON_INCLUDES += libs/frameworks/VideoToolbox.framework/Headers
 ADDON_INCLUDES += libs/frameworks/QtCore.framework/Headers
 ADDON_LIBS += /usr/lib/libbz2.dylib
