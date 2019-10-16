@@ -223,8 +223,8 @@ void MLTK::setupAlgorithms(essentia::streaming::AlgorithmFactory& f){
     //    startFromZero = false: a frame is the last one if its center position is at or beyond the end of the stream
     //    In both cases the start time of the last frame is never beyond the end of the stream.
     { "FrameCutter", f.create("FrameCutter",
-                              "frameSize", 2048,
-                              "hopSize", 1024,
+                              "frameSize", frameSize,
+                              "hopSize", frameSize/2,
                               "startFromZero", false) },
 
     { "LargeFrameCutter", f.create("FrameCutter",
@@ -289,9 +289,11 @@ void MLTK::setupAlgorithms(essentia::streaming::AlgorithmFactory& f){
     { "Welch", f.create("Welch") },
     
     { "Windowing", f.create("Windowing",
+                            "size", frameSize,
                             "type", "hann") },
 
     { "LargeWindowing", f.create("Windowing",
+                                 "size", 32768,
                                  "type", "hann") },
 
     
@@ -320,7 +322,7 @@ void MLTK::setupAlgorithms(essentia::streaming::AlgorithmFactory& f){
     { "HFC", f.create("HFC") },
     
     { "LPC", f.create("LPC",
-                      "order", 2) },
+                      "order", 10) },
     
     { "MFCC", f.create("MFCC") },
     
@@ -750,14 +752,13 @@ void MLTK::connectDefaultAlgorithmStream(essentia::streaming::AlgorithmFactory& 
 
   algorithms["Windowing"]->output("frame") >> algorithms["RMS"]->input("array");
 
-  *inputVec >> algorithms["LargeDCRemoval"]->input("signal");
-
-  algorithms["LargeDCRemoval"]->output("signal") >> algorithms["LargeFrameCutter"]->input("signal");
+  *inputVec >> algorithms["LargeFrameCutter"]->input("signal");
   //  fc2->output("frame") >> w2->input("frame");
   algorithms["LargeFrameCutter"]->output("frame") >> algorithms["LPC"]->input("frame");
   //  w2->output("frame") >> fft2->input("frame");
   algorithms["LargeFrameCutter"]->output("frame") >> algorithms["LargeWindowing"]->input("frame");
   algorithms["LargeWindowing"]->output("frame") >> algorithms["Chromagram"]->input("frame");
+  algorithms["LargeWindowing"]->output("frame") >> algorithms["SpectrumCQ"]->input("frame");
   algorithms["Windowing"]->output("frame") >> algorithms["Spectrum"]->input("frame");
   // GFCC -- gammatone feature cepstrum coefficients
   //    cout << 6 << endl;
@@ -784,6 +785,7 @@ void MLTK::connectDefaultAlgorithmStream(essentia::streaming::AlgorithmFactory& 
   algorithms["RMS"]->output("rms") >> PC(pool, "RMS");
   //  fft->output("fft") >> PC(pool, "fft");
   algorithms["Spectrum"]->output("spectrum") >> PC(pool, "Spectrum");
+  algorithms["SpectrumCQ"]->output("spectrumCQ") >> PC(pool, "SpectrumCQ");
   algorithms["BFCC"]->output("bands") >> PC(pool, "BFCC.bands");
   algorithms["BFCC"]->output("bfcc") >> PC(pool, "BFCC.coefs");
   algorithms["GFCC"]->output("bands") >> PC(pool, "GFCC.bands");
@@ -839,28 +841,91 @@ void MLTK::connectAlgorithmStream(essentia::streaming::AlgorithmFactory& factory
   algorithms["HPCP"]->output("hpcp") >> PC(pool, "HPCP");
 }
 
-void MLTK::setup(int frameSize=1024, int sampleRate=44100, int hopSize=512){
+void MLTK::setup(int frameSize=2048, int sampleRate=44100, int hopSize=1024, bool useDefaultAlgorithms=true){
   this->frameSize = frameSize;
   this->sampleRate = sampleRate;
   this->hopSize = hopSize;
 
   audioBuffer.resize(frameSize, 0.0);
-//  leftAudioBuffer.getBuffer().resize(frameSize, 0.0);
-//  rightAudioBuffer.getBuffer().resize(frameSize, 0.0);
-  leftAudioBuffer.resize(frameSize, 0.0);
-  rightAudioBuffer.resize(frameSize, 0.0);
+  leftAudioBuffer.getBuffer().resize(frameSize, 0.0);
+  rightAudioBuffer.getBuffer().resize(frameSize, 0.0);
 
   essentia::init();
   
   essentia::streaming::AlgorithmFactory& f = essentia::streaming::AlgorithmFactory::instance();
   f.init();
   setupAlgorithms(f);
-  connectDefaultAlgorithmStream(f);
+
+  if(useDefaultAlgorithms){
+    connectDefaultAlgorithmStream(f);
+  } else {
+    connectAlgorithmStream(f);
+  }
   f.shutdown();
   network = new scheduler::Network(inputVec);
   network->run();
-  
+  // the minMaxMap provides a way of dynamically scaling
+  // the values for different algorithms. This initializes
+  // the minimums and maximums at their limits. These values
+  // will get updated at runtime.
+
+  for(std::map<string,Algorithm*>::iterator iter = algorithms.begin(); iter != algorithms.end(); ++iter) {
+    string k = iter->first;
+
+    // minimum
+    minMaxMap[k][0] = 1000.0;
+    // maximum
+    minMaxMap[k][1] = -1000.0;
+
+    //ignore value
+    //Value v = iter->second;
+  }
 }
+
+void MLTK::setup(ofSoundStream s, bool useDefaultAlgorithms=true){
+  this->frameSize = s.getBufferSize();
+  this->sampleRate = s.getSampleRate();
+  this->hopSize = s.getBufferSize()/2;
+  this->numberOfInputChannels = s.getNumInputChannels();
+  this->numberOfOutputChannels = s.getNumOutputChannels();
+
+  audioBuffer.resize(frameSize, 0.0);
+  leftAudioBuffer.getBuffer().resize(frameSize, 0.0);
+  rightAudioBuffer.getBuffer().resize(frameSize, 0.0);
+
+  essentia::init();
+
+  essentia::streaming::AlgorithmFactory& f = essentia::streaming::AlgorithmFactory::instance();
+  f.init();
+  setupAlgorithms(f);
+
+  if(useDefaultAlgorithms){
+    connectDefaultAlgorithmStream(f);
+  } else {
+    connectAlgorithmStream(f);
+  }
+  f.shutdown();
+  network = new scheduler::Network(inputVec);
+  network->run();
+
+  // the minMaxMap provides a way of dynamically scaling
+  // the values for different algorithms. This initializes
+  // the minimums and maximums at their limits. These values
+  // will get updated at runtime.
+
+  for(std::map<string,Algorithm*>::iterator iter = algorithms.begin(); iter != algorithms.end(); ++iter) {
+    string k = iter->first;
+
+    // minimum
+    minMaxMap[k][0] = 1000.0;
+    // maximum
+    minMaxMap[k][1] = -1000.0;
+
+    //ignore value
+    //Value v = iter->second;
+  }
+}
+
 
 void MLTK::run(){
   update();
@@ -878,6 +943,32 @@ void MLTK::run(){
   }
 }
 
+void MLTK::drawGraph(string algorithm, int x, int y, int w, int h){
+  // ConstantQ Spectrum
+  if(algorithm == "RMS"){
+    ofDrawBox(x, y, 0, w, h, w);
+  } else {
+    const vector<Real> &algo = getData(algorithm);
+    const float algoWidth = (w/algo.size());
+
+    int n = MIN(algo.size(),180);
+
+    for(int i = 0; i < n; i++){
+      float val = algo[i] * float(h);
+      if(val < minMaxMap[algorithm][0]) minMaxMap[algorithm][0] = val;
+      if(val > minMaxMap[algorithm][1]) minMaxMap[algorithm][1] = val;
+      ofDrawRectangle(x + (i * algoWidth),
+                      y,
+                      algoWidth,
+                      ofMap(val,
+                            minMaxMap[algorithm][0],
+                            minMaxMap[algorithm][1],
+                            0.0,
+                            -h));
+    }
+  }
+}
+
 template <class mType>
 bool MLTK::exists(string algorithm){
   return pool.contains<mType>(algorithm);
@@ -888,7 +979,7 @@ vector<float> MLTK::getMeanData(string algorithm){
 };
 
 vector<float> MLTK::getData(string algorithm){
-  if(hopSize == frameSize/2){
+  if(hopSize == frameSize/2 || hopSize == frameSize/4){
     return pool.value<vector<vector<Real>>>(algorithm)[1];
   } else {
     cout << "hopSize is not equal to frameSize/2";
@@ -909,10 +1000,12 @@ void MLTK::update(){
     //    std::lock_guard<std::mutex>mtx(mutex);
     //    leftAudioBuffer = tmpLeftBuffer;
     //    rightAudioBuffer = tmpRightBuffer;
-  for (int i = 0; i < frameSize; i++){
-    audioBuffer[i] = (Real) ((leftAudioBuffer[i]) + (rightAudioBuffer[i])) / 2;
-  }
     //  }
+  if(numberOfInputChannels > 1){
+    for (int i = 0; i < frameSize; i++){
+      audioBuffer[i] = (Real) ((leftAudioBuffer.getBuffer()[i]) + (rightAudioBuffer.getBuffer()[i])) / 2;
+    }
+  }
 }
 
 void MLTK::save(){

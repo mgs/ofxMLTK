@@ -79,8 +79,8 @@ public:
   // NOT CURRENTLY IMPLEMENTED
   
   // These soundbuffers contain the data coming in from openFrameworks
-  //  ofSoundBuffer leftAudioBuffer, rightAudioBuffer;
-  vector<Real> leftAudioBuffer, rightAudioBuffer;
+  ofSoundBuffer leftAudioBuffer, rightAudioBuffer;
+//  vector<Real> leftAudioBuffer, rightAudioBuffer;
   
   // Vector holding the individuals channels
   vector<ofSoundBuffer> channels;
@@ -116,7 +116,7 @@ public:
   int sampleRate = 44100;
   int frameSize = 2048;
   int hopSize = frameSize/2;
-  int numberOfBuffers = 1;
+  int numberOfBuffers = 4;
 
   essentia::standard::Algorithm *aggr, *output;
   
@@ -134,8 +134,10 @@ public:
   vector<Real> getData(string algorithm);
   vector<Real> getMeanData(string algorithm);
   vector<vector<Real>> getRaw(string algorithm);
-  
-  void setup(int frameSize, int sampleRate, int hopSize);
+
+  void drawGraph(string algorithm, int x, int y, int w, int h);
+  void setup(int frameSize, int sampleRate, int hopSize, bool useDefaultAlgorithms);
+  void setup(ofSoundStream s, bool useDefaultAlgorithms);
 
   // Loads most of Essentia's streaming algorithms into the algorithm registry
   void setupAlgorithms(essentia::streaming::AlgorithmFactory& factory);
@@ -148,6 +150,8 @@ public:
 
   template <typename... Params>
   void create(map<string, Algorithm*> &m, essentia::streaming::AlgorithmFactory& f, string algo, Params... params);
+
+  map<string, float[2]> minMaxMap;
 
   void update();
   void run();
